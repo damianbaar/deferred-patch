@@ -1,0 +1,24 @@
+{
+  "name": "deffered-patch",
+  "version": "0.0.1",
+  "description": "Deffered virtual dom patching based on Promisses",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "virtual-dom",
+    "patch",
+    "promisses",
+    "promise",
+    "lazy",
+    "deffered",
+    "render"
+  ],
+  "author": "Damian Baar <damian.baar@gmail.com> (http://github.com/damianbaar)",
+  "license": "MIT",
+  "dependencies": {
+    "virtual-dom": "^2.1.1",
+    "x-is-array": "^0.1.0"
+  }
+}
