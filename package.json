@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  , "example":"browserify example/index.js -o example/bundle.js -d"
+  , "dev": "watchify example/index.js -o example/bundle.js -d"
   },
   "keywords": [
     "virtual-dom",

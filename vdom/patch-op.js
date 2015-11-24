@@ -3,7 +3,7 @@ var applyProperties = require("virtual-dom/vdom/apply-properties")
 var isWidget = require("virtual-dom/vnode/is-widget")
 var VPatch = require("virtual-dom/vnode/vpatch")
 
-var updateWidget = require("virtual-dom/vnode/update-widget")
+var updateWidget = require("virtual-dom/vdom/update-widget")
 
 module.exports = applyPatch
 

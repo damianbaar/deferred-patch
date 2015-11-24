@@ -2,21 +2,11 @@ var isArray = require("x-is-array")
 
 var render = require("virtual-dom/vdom/create-element")
 var domIndex = require("virtual-dom/vdom/dom-index")
-var patchOp = require("virtual-dom/vdom/patch-op")
+var patchOp = require("./patch-op")
 
-module.exports = patch
+module.exports = defferedPatch
 
-function patch(rootNode, patches, renderOptions) {
-    renderOptions = renderOptions || {}
-    renderOptions.patch = renderOptions.patch && renderOptions.patch !== patch
-        ? renderOptions.patch
-        : patchRecursive
-    renderOptions.render = renderOptions.render || render
-
-    return renderOptions.patch(rootNode, patches, renderOptions)
-}
-
-function patchRecursive(rootNode, patches, renderOptions) {
+function defferedPatch(rootNode, patches, renderOptions) {
     var indices = patchIndices(patches)
 
     if (indices.length === 0) {

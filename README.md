@@ -21,9 +21,8 @@ document.body.appendChild(rootNode)
 var update = function(newtree) {
     patches = diff(tree, newtree)
     //patch itself expose a way to change a rendering options
-    var defferedPatch = patch(rootNode, patches, { renderOptions: { render: require('deffered-patch') }})
-
-    //deferedPatch is a Promise
+    //defferedPatch is a Promise
+    var defferedPatch = patch(rootNode, patches, { patch: require('deffered-patch') })
 
     defferedPatch.then(function(d) { rootNode = d[0] }) //Promise.all this is why there is an array, temp solution
     tree = newtree
