@@ -15,27 +15,22 @@ var update = function(newtree) {
     patches = diff(tree, newtree)
     var a = patch(rootNode, patches, { patch: defferedPatch })
 
-    a.then(function(d) {
-      console.log('current render',d)
-      rootNode = d[0]
-    })
-    tree = newtree
-  }
+    if(a.then)
+      a.then(function(d) {
+        console.log('### render', d)
+        rootNode = d
+      })
+    else {
+      rootNode = a
+    }
 
-var onRemove = function(delay) {
-  return function(node) {
-    console.log('onRemove hook',node)
-    return new Promise(function(ok, err) {
-      node.style.color = '#FF0000'//mark as to be removed
-      setTimeout(ok, delay)
-    })
-  }
+    tree = newtree
   }
 
 var onEnter = function(delay) {
   return function(node) {
-    console.log('onEnter hook', node)
     return new Promise(function(ok, err) {
+      console.log('onEnter', node)
       node.style.color = '#00FF00'
       setTimeout(ok, delay)
     })
@@ -43,44 +38,56 @@ var onEnter = function(delay) {
 }
 
 var onUpdate = function(delay) {
-  //TODO
+  return function(node) {
+    console.log('onUpdate', node)
+    return new Promise(function(ok, err) {
+      node.style.color = '#0000FF'
+      setTimeout(ok, delay)
+    })
+  }
 }
+
+var onExit = function(delay) {
+  return function(node) {
+    console.log('onExit', node)
+    return new Promise(function(ok, err) {
+      node.style.color = '#FF0000'
+      setTimeout(ok, delay * 100 * Math.random())
+    })
+  }
+  }
+
 
 var cumulativeDelay = function(val) { this.total = 0 }
 cumulativeDelay.prototype.take = function(val) { this.total += val; return val }
 
 var delay = new cumulativeDelay()
 
-update(h('span', 
-         [ h('div', {onRemove:onRemove(delay.take(100)), onEnter: onEnter(delay.take(100))}, ['child1']),
-           h('div', {onRemove:onRemove(delay.take(200))}, ['child2']),
-           h('div', {key: 2, onEnter: onEnter(delay.take(1000))}, [ 
-             h('div', {onRemove:onRemove(delay.take(300))}, ['nested child1']),
-             h('div', {}, [ h('div', {}, [ 
-               h('div', {onRemove:onRemove(delay.take(500))}, ['nested child1']),
-               h('div', {onRemove:onRemove(delay.take(600))}, ['nested child2']),
-               ])
-             ])
-           ])
+var lifecycle = function(custom) {
+  return Object.assign(custom || {}, {    
+      onEnter: onEnter(delay.take(100))
+    , onUpdate: onUpdate(delay.take(100))
+    , onExit: onExit(delay.take(100))
+  })
+}
+
+update(h('span', lifecycle(),
+         [ h('div', lifecycle({key:1}), ['child1']),
+           h('div', lifecycle(), ['child2']),
+           h('div', lifecycle(), ['child3']),
+           h('div', lifecycle(), ['child4']),
+           h('div', lifecycle({key:5}), ['child5'])
          ]))
 
+setTimeout(function() {
+  update(h('span', lifecycle(), 
+           [ h('div', lifecycle({key:1}), ['child1']),
+             h('div', lifecycle({key:5}), ['child5']),
+             h('div', lifecycle(), ['child2'])
+           ]))
+
   setTimeout(function() {
-  // update(h('span', 
-  //          [ h('div', {onRemove:onRemove(delay.take(100))}, ['child1']),
-  //            h('div', {key: 2}, [ 
-  //              h('div', {onRemove:onRemove(delay.take(300))}, ['nested child1']),
-  //              h('div', {key:3, onRemove:onRemove(delay.take(400))}, [ h('div', {}, [ 
-  //                h('div', {onRemove:onRemove(delay.take(500))}, ['nested child1']),
-  //                h('div', {onRemove:onRemove(delay.take(600))}, ['nested child5'])
-  //                ])
-  //              ])
-  //            ]),
-  //          ])) 
-    update(h('div.text', { onRemove: onRemove(delay.take(1000)), onEnter: onEnter(delay.take(1000)) },['test'] ))
-
-    console.log('Animations duration: ', delay.total)
-
-    setTimeout(function() {
-      update(h('span', {}, h('div', {}, ['END!'])))
-    }, delay.total)
+    update(h('span', lifecycle(), ['END!']))
   }, delay.total)
+
+}, delay.total)

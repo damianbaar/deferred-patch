@@ -19,57 +19,56 @@ function defferedPatch(rootNode, patches, renderOptions) {
     if (!renderOptions.document && ownerDocument !== document) {
         renderOptions.document = ownerDocument
     }
-    
-    var __apply = function(idx, rootNode) {
-      var nodeIndex = indices[idx]
-      return applyPatch(rootNode,
-          index[nodeIndex],
-          patches[nodeIndex],
-          renderOptions)
-    }
 
-    var __m = indices.map(function(idx, i) {
-      return new Promise(function(ok, err) {
-        var __a = __apply(idx, rootNode)
-
-        if(__a.then) {
-          return __a.then(function(node) { 
-            rootNode = node
-            ok(__a) 
-          })
-        }
-
-        ok(__a)
-      })
+    var operations = indices.map(function(idx) {
+      return applyPatch(
+              rootNode,
+              index[idx],
+              patches[idx],
+              renderOptions)
     })
 
-    return Promise.all(__m)
+    return new Promise(function(ok, err) {
+      Promise
+        .all(operations)
+        .then(function(res) {
+          ok(isArray(res) ? res[0] : res)
+        })
+    })
 }
 
 function applyPatch(rootNode, domNode, patchList, renderOptions) {
-    if (!domNode) {
-        return rootNode
-    }
+  if (!domNode) return rootNode
 
-    var newNode
+  var newNode
+  var defferedPatches = []
 
-    if (isArray(patchList)) {
-        for (var i = 0; i < patchList.length; i++) {
-            newNode = patchOp(patchList[i], domNode, renderOptions)
+  if (!isArray(patchList)) patchList = [patchList]
 
-            if (domNode === rootNode) {
-                rootNode = newNode
-            }
-        }
-    } else {
-        newNode = patchOp(patchList, domNode, renderOptions)
+  for (var i = 0; i < patchList.length; i++) {
+    defferedPatches.push(new Promise(function(ok, err) {
+      newNode = patchOp(patchList[i], domNode, renderOptions)
 
-        if (domNode === rootNode) {
-            rootNode = newNode
-        }
-    }
+      if(newNode.then) {
+        newNode.then(function(node) { 
+          rootNode = isArray(node) ? node[0] : node
+          if (domNode === rootNode) rootNode = newNode
+          ok(newNode) 
+        })
+      } else {
+        if (domNode === rootNode) rootNode = newNode
+        ok(newNode)
+      }
+    }))
+  }
 
-    return rootNode
+  return new Promise(function(ok, err) {
+    Promise
+      .all(defferedPatches)
+      .then(function(node) {
+        ok(node[Math.max(0, node.length - 1)])
+      })
+  })
 }
 
 function patchIndices(patches) {
