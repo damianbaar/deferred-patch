@@ -7,6 +7,11 @@ Proof of concept or playground rather than lib (yet). Goal is to make `virtual-d
 * implement `enter`/`update`/`exit` for each node - 'remove' partially done
 
 ```js
+var h = require('virtual-dom/h')
+  , diff = require('virtual-dom/diff')
+  , patch = require('virtual-dom/patch')
+  , createElement = require('virtual-dom/create-element')
+
 var patches
   , tree = h('span')
   , rootNode = createElement(tree)
@@ -15,7 +20,10 @@ document.body.appendChild(rootNode)
 
 var update = function(newtree) {
     patches = diff(tree, newtree)
+    //patch itself expose a way to change a rendering options
     var defferedPatch = patch(rootNode, patches, { renderOptions: { render: require('deffered-patch') }})
+
+    //deferedPatch is a Promise
 
     defferedPatch.then(function(d) { rootNode = d[0] }) //Promise.all this is why there is an array, temp solution
     tree = newtree
