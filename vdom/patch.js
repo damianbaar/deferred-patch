@@ -6,7 +6,11 @@ var patchOp = require("./patch-op")
 
 module.exports = defferedPatch
 
+var opNo = 0
+
 function defferedPatch(rootNode, patches, renderOptions) {
+    console.log('--------> operation no', opNo++)
+
     var indices = patchIndices(patches)
 
     if (indices.length === 0) {
@@ -20,13 +24,26 @@ function defferedPatch(rootNode, patches, renderOptions) {
         renderOptions.document = ownerDocument
     }
 
+    var sort = function(a,b) {
+      if (a.type > b.type) return 1
+      if (a.type < b.type) return -1
+      return 0
+    }
+
     var operations = indices.map(function(idx) {
-      return applyPatch(
+      var o = function() {
+        return applyPatch(
               rootNode,
               index[idx],
-              patches[idx],
+              (isArray(patches[idx]) ? patches[idx].sort(sort).reverse() : patches[idx]),
               renderOptions)
+      }
+      o.type = isArray(patches[idx]) ? -1 : patches[idx].type
+      return o
     })
+    .sort(sort)
+    .reverse()
+    .map(function(d) { return d() })
 
     return new Promise(function(ok, err) {
       Promise
@@ -44,7 +61,6 @@ function applyPatch(rootNode, domNode, patchList, renderOptions) {
   var defferedPatches = []
 
   if (!isArray(patchList)) patchList = [patchList]
-
   for (var i = 0; i < patchList.length; i++) {
     defferedPatches.push(new Promise(function(ok, err) {
       newNode = patchOp(patchList[i], domNode, renderOptions)
@@ -61,7 +77,7 @@ function applyPatch(rootNode, domNode, patchList, renderOptions) {
       }
     }))
   }
-
+  
   return new Promise(function(ok, err) {
     Promise
       .all(defferedPatches)

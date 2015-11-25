@@ -20,7 +20,7 @@ var getChildsOps = function(vNode, domNode, method) {
       if(child.properties && child.properties[method]) {
         c && ops.push(child.properties[method](c));
       }
-      c && getChildren(child, c);
+      // c && getChildren(child, c);
     })
   }
 
@@ -249,7 +249,7 @@ function reorderChildren(domNode, moves, vnode) {
 
     return new Promise(function(ok, err) {
       Promise
-        //rething it a bit ... naive
+        //rething it a bit ... filter out appropriately insert + remove
         .all(removeOp(vnode, domNode).concat(insertOp(vnode, domNode)))
         .then(function() {
           toRemove.forEach(_remove)

@@ -52,7 +52,7 @@ var onExit = function(delay) {
     console.log('onExit', node)
     return new Promise(function(ok, err) {
       node.style.color = '#FF0000'
-      setTimeout(ok, delay * 100 * Math.random())
+      setTimeout(ok, delay)
     })
   }
   }
@@ -65,14 +65,17 @@ var delay = new cumulativeDelay()
 
 var lifecycle = function(custom) {
   return Object.assign(custom || {}, {    
-      onEnter: onEnter(delay.take(100))
-    , onUpdate: onUpdate(delay.take(100))
-    , onExit: onExit(delay.take(100))
+      onEnter: onEnter(delay.take(1000)*Math.random())
+    , onUpdate: onUpdate(delay.take(1000))
+    , onExit: onExit(delay.take(1000*Math.random()))
   })
 }
 
 update(h('span', lifecycle(),
          [ h('div', lifecycle({key:1}), ['child1']),
+           h('div', lifecycle(), ['child2']),
+           h('div', lifecycle(), ['child3']),
+           h('div', lifecycle(), ['child4']),
            h('div', lifecycle(), ['child2']),
            h('div', lifecycle(), ['child3']),
            h('div', lifecycle(), ['child4']),
@@ -82,12 +85,15 @@ update(h('span', lifecycle(),
 setTimeout(function() {
   update(h('span', lifecycle(), 
            [ h('div', lifecycle({key:1}), ['child1']),
-             h('div', lifecycle({key:5}), ['child5']),
-             h('div', lifecycle(), ['child2'])
+             h('div', lifecycle(), ['child2']),
+             h('div', lifecycle(), ['child2']),
+             h('div', lifecycle(), ['child3']),
+             h('div', lifecycle({key:5}), ['child5'])
            ]))
+  //
+    // update(h('span', lifecycle(), ['END!']))
+  // setTimeout(function() {
+  //   update(h('span', lifecycle(), ['END!']))
+  // }, delay.total)
 
-  setTimeout(function() {
-    update(h('span', lifecycle(), ['END!']))
-  }, delay.total)
-
-}, delay.total)
+}, 3000)
