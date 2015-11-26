@@ -8,6 +8,18 @@ module.exports = defferedPatch
 
 var opNo = 0
 
+var cause = 
+  [ "NONE"
+  , "VTEXT"
+  , "VNODE"
+  , "WIDGET"
+  , "PROPS"
+  , "ORDER"
+  , "INSERT"
+  , "REMOVE"
+  , "THUNK"
+  ]
+
 function defferedPatch(rootNode, patches, renderOptions) {
     console.log('--------> operation no', opNo++)
 
@@ -23,6 +35,18 @@ function defferedPatch(rootNode, patches, renderOptions) {
     if (!renderOptions.document && ownerDocument !== document) {
         renderOptions.document = ownerDocument
     }
+    
+    // var __patches = []
+    // for(var i = 0; i < indices.length; i++){
+    //   var idx = indices[i]
+    //     , patch = patches[idx]
+    //   
+    //   if(isArray(patch)) {
+    //     patch.forEach(function(d) { console.log('update', cause[d.type]) })
+    //   } else {
+    //     console.log('update', cause[patch.type])
+    //   }
+    // }
 
     var sort = function(a,b) {
       if (a.type > b.type) return 1
@@ -30,61 +54,57 @@ function defferedPatch(rootNode, patches, renderOptions) {
       return 0
     }
 
-    var operations = indices.map(function(idx) {
-      var o = function() {
-        return applyPatch(
-              rootNode,
-              index[idx],
-              (isArray(patches[idx]) ? patches[idx].sort(sort).reverse() : patches[idx]),
-              renderOptions)
-      }
-      o.type = isArray(patches[idx]) ? -1 : patches[idx].type
-      return o
+    // .reverse()
+    //
+    //
+    var __p = []
+
+    indices.forEach(function(d) {
+      var idx = d
+        , patch = patches[idx]
+
+      if (!isArray(patch)) patch = [patch]
+      
+      patch.forEach(function(d) {
+        __p.push({idx: idx, patch: d})
+      }) 
     })
-    .sort(sort)
-    .reverse()
-    .map(function(d) { return d() })
+
+    var operations = __p.map(function(d) {
+      return function(__rootNode) {
+        return function(ok) {
+          var __c = applyPatch(index[d.idx], d.patch, renderOptions)
+          if(__c.then) {
+            __c.then(function(node) {
+              ok(__rootNode)
+            })
+          }else{
+          ok(__rootNode)
+          }
+        }
+      }
+    })
 
     return new Promise(function(ok, err) {
-      Promise
-        .all(operations)
-        .then(function(res) {
-          ok(isArray(res) ? res[0] : res)
+      var p = Promise.resolve(rootNode)
+        , z = 0
+
+      var takeNext = function(p) {
+        p.then(function(node) {
+          if( z == operations.length ) return ok(node)
+          if (rootNode === node) rootNode = node
+          takeNext(new Promise(operations[z](node)))
+          z++
         })
+      }
+
+      takeNext(p)
     })
 }
 
-function applyPatch(rootNode, domNode, patchList, renderOptions) {
+function applyPatch(domNode, patchList, renderOptions) {
   if (!domNode) return rootNode
-
-  var newNode
-  var defferedPatches = []
-
-  if (!isArray(patchList)) patchList = [patchList]
-  for (var i = 0; i < patchList.length; i++) {
-    defferedPatches.push(new Promise(function(ok, err) {
-      newNode = patchOp(patchList[i], domNode, renderOptions)
-
-      if(newNode.then) {
-        newNode.then(function(node) { 
-          rootNode = isArray(node) ? node[0] : node
-          if (domNode === rootNode) rootNode = newNode
-          ok(newNode) 
-        })
-      } else {
-        if (domNode === rootNode) rootNode = newNode
-        ok(newNode)
-      }
-    }))
-  }
-  
-  return new Promise(function(ok, err) {
-    Promise
-      .all(defferedPatches)
-      .then(function(node) {
-        ok(node[Math.max(0, node.length - 1)])
-      })
-  })
+  return patchOp(patchList, domNode, renderOptions)
 }
 
 function patchIndices(patches) {
@@ -98,3 +118,13 @@ function patchIndices(patches) {
 
     return indices
 }
+
+  // patchList = patchList.filter(function(p) {
+  //   var a = Object.keys(p.patch.properties || {})
+  //     , lc = ['onEnter', 'onUpdate', 'onExit']
+  //     , c = 0
+  //
+  //   a.forEach(function(d) { if (lc.indexOf(d) > -1) c++ })
+  //   if (a.length == c && c > 0) return false
+  //   return true
+  // })

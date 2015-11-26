@@ -13,16 +13,13 @@ document.body.appendChild(rootNode)
 
 var update = function(newtree) {
     patches = diff(tree, newtree)
+    console.log('input', rootNode)
     var a = patch(rootNode, patches, { patch: defferedPatch })
 
-    if(a.then)
-      a.then(function(d) {
-        console.log('### render', d)
-        rootNode = d
-      })
-    else {
-      rootNode = a
-    }
+    a.then(function(d) {
+      console.log('### render', d)
+      rootNode = d
+    })
 
     tree = newtree
   }
@@ -65,35 +62,31 @@ var delay = new cumulativeDelay()
 
 var lifecycle = function(custom) {
   return Object.assign(custom || {}, {    
-      onEnter: onEnter(delay.take(1000)*Math.random())
-    , onUpdate: onUpdate(delay.take(1000))
-    , onExit: onExit(delay.take(1000*Math.random()))
+      onEnter: onEnter(delay.take(100*Math.random()))
+    , onUpdate: onUpdate(delay.take(100*Math.random()))
+    , onExit: onExit(delay.take(100*Math.random()))
   })
 }
 
-update(h('span', lifecycle(),
-         [ h('div', lifecycle({key:1}), ['child1']),
-           h('div', lifecycle(), ['child2']),
-           h('div', lifecycle(), ['child3']),
-           h('div', lifecycle(), ['child4']),
-           h('div', lifecycle(), ['child2']),
-           h('div', lifecycle(), ['child3']),
-           h('div', lifecycle(), ['child4']),
-           h('div', lifecycle({key:5}), ['child5'])
-         ]))
+var c = 0
+function run() {
+  var root = 
+    h('span', lifecycle(),
+     [ h('div', lifecycle(), ['child1']),
+       h('div', lifecycle(), ['child2']),
+       h('div', lifecycle(), ['child3']),
+       h('div', lifecycle(), ['child4']),
+       h('div', lifecycle(), ['child2']),
+       h('div', lifecycle(), ['child3']),
+       h('div', lifecycle(), ['child4']),
+       h('div', lifecycle(), ['child5']),
+       h('button', {'onclick': function() { run(c++) }}, ['redraw'])
+     ])
+  if (c % 2 == 0) update(root)
+  else {
+    root.children.reverse()
+    update(root)
+  }
+}
 
-setTimeout(function() {
-  update(h('span', lifecycle(), 
-           [ h('div', lifecycle({key:1}), ['child1']),
-             h('div', lifecycle(), ['child2']),
-             h('div', lifecycle(), ['child2']),
-             h('div', lifecycle(), ['child3']),
-             h('div', lifecycle({key:5}), ['child5'])
-           ]))
-  //
-    // update(h('span', lifecycle(), ['END!']))
-  // setTimeout(function() {
-  //   update(h('span', lifecycle(), ['END!']))
-  // }, delay.total)
-
-}, 3000)
+run(c++)

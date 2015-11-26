@@ -1,4 +1,5 @@
 var applyProperties = require("virtual-dom/vdom/apply-properties")
+var isArray = require("x-is-array")
 
 var isWidget = require("virtual-dom/vnode/is-widget")
 var VPatch = require("virtual-dom/vnode/vpatch")
@@ -10,21 +11,24 @@ module.exports = applyPatch
 var getChildsOps = function(vNode, domNode, method) {
   var ops = []
 
-  var getChildren = function(node, dom) {
-    if (!dom) return
+  var getChildren = function(node, tree) {
+    if (!tree) return
 
-    var c
+    var domNode
 
     (node.children || []).forEach(function(child, idx) {
-      c = dom.children[idx]
+      domNode = tree.children[idx]
       if(child.properties && child.properties[method]) {
-        c && ops.push(child.properties[method](c));
+        domNode && ops.push(child.properties[method](domNode));
+      } else if(domNode && domNode[method]) {
+        ops.push(domNode[method](domNode));
       }
       // c && getChildren(child, c);
     })
   }
 
-  var start = getChildren({ children: [vNode] }, { children:[domNode] })
+  var start = getChildren({ children: isArray(vNode) ? vNode : [vNode] }
+                         , { children: isArray(domNode) ? domNode : [domNode] })
   return ops.reverse()
 }
 
@@ -53,39 +57,26 @@ function applyPatch(vpatch, domNode, renderOptions) {
 
     switch (type) {
         case VPatch.REMOVE:
-          return new Promise(function(ok, err) {
-            Promise
+          return Promise
               .all(removeOp(vNode, domNode))
-              .then(function(node) {
-                removeNode(domNode, vNode)
-                ok(domNode)
+              .then(function() {
+                return removeNode(domNode, vNode)
+                console.log('REMOVENODE', domNode)
+                // return domNode
               })
-          })
         case VPatch.INSERT:
-          return new Promise(function(ok, err) {
-            Promise
+          return Promise
               .all(insertOp(patch, domNode))
               .then(function() {
-                insertNode(domNode, patch, renderOptions)
-                ok(domNode)
+                console.log('INSERTNODE', domNode)
+                return insertNode(domNode, patch, renderOptions)
               })
-          })
         case VPatch.VTEXT:
-          var extend = function(patch, domNode) {
-            patch.properties = patch.properties || {}
-            patch.properties.onUpdate = domNode.onUpdate
-            patch.properties.onExit = domNode.onExit
-            patch.properties.onStart = domNode.onStart
-            return patch
-          }
-          return new Promise(function(ok, err) {
-            Promise
-              .all(updateOp(extend(patch, domNode.parentNode), domNode.parentNode))
+          return Promise
+              .all(updateOp(patch, domNode.parentNode))
               .then(function() {
-                stringPatch(domNode, vNode, patch, renderOptions)
-                ok(domNode)
+                return stringPatch(domNode, vNode, patch, renderOptions)
               })
-          })
         case VPatch.VNODE:
             return vNodePatch(domNode, vNode, patch, renderOptions)
         case VPatch.ORDER:
@@ -94,14 +85,13 @@ function applyPatch(vpatch, domNode, renderOptions) {
           ['onEnter', 'onUpdate', 'onExit'].forEach(function(d) { delete patch[d] })
           if (!Object.keys(patch).length) return Promise.resolve(domNode)
 
-          return new Promise(function(ok, err) {
-            Promise
+                console.log('PROPS', domNode)
+          return Promise
               .all(updateOp(vNode, domNode))
               .then(function() {
-                ok(domNode)
                 applyProperties(domNode, patch, vNode.properties)
+                return domNode
               })
-          })
         case VPatch.WIDGET:
             return widgetPatch(domNode, vNode, patch, renderOptions)
         case VPatch.THUNK:
@@ -128,6 +118,7 @@ function insertNode(parentNode, vNode, renderOptions) {
     var newNode = renderOptions.render(vNode, renderOptions)
     
     var props
+
     if (props = vNode.properties) {
       newNode.onEnter = props.onEnter
       newNode.onUpdate = props.onUpdate
@@ -185,19 +176,17 @@ function widgetPatch(domNode, leftVNode, widget, renderOptions) {
 function vNodePatch(domNode, leftVNode, vNode, renderOptions) {
     var parentNode = domNode.parentNode
 
-    return new Promise(function(ok, err) {
-      Promise
-        .all(removeOp(leftVNode, domNode))
-        .then(function() {
-          var newNode = renderOptions.render(vNode, renderOptions)
+    return Promise
+      .all(removeOp(leftVNode, domNode))
+      .then(function() {
+        var newNode = renderOptions.render(vNode, renderOptions)
 
-          if (parentNode && newNode !== domNode) {
-              parentNode.replaceChild(newNode, domNode)
-          }
+        if (parentNode && newNode !== domNode) {
+            parentNode.replaceChild(newNode, domNode)
+        }
 
-          ok(newNode)
-        })
-    })
+        return newNode
+      })
 }
 
 function destroyWidget(domNode, w) {
@@ -215,10 +204,7 @@ function reorderChildren(domNode, moves, vnode) {
     var insert
 
     var toRemove = []
-      , _remove = function(node) { 
-        if(domNode.contains(node))
-          domNode.removeChild(node) 
-      }
+      , _remove = function(node) { domNode.removeChild(node) }
 
     for (var i = 0; i < moves.removes.length; i++) {
         remove = moves.removes[i]
@@ -231,10 +217,7 @@ function reorderChildren(domNode, moves, vnode) {
     }
 
     var toInsert = []
-      , _insert = function(desc) { 
-        if(domNode.contains(desc.node))
-          domNode.insertBefore(desc.node, desc.idx) 
-      }
+      , _insert = function(desc) { domNode.insertBefore(desc.node, desc.idx) }
 
     var length = childNodes.length
 
@@ -246,17 +229,14 @@ function reorderChildren(domNode, moves, vnode) {
         var idx = insert.to >= length++ ? null : childNodes[insert.to]
         toInsert.push({ node: node, idx: idx })
     }
-
-    return new Promise(function(ok, err) {
-      Promise
-        //rething it a bit ... filter out appropriately insert + remove
-        .all(removeOp(vnode, domNode).concat(insertOp(vnode, domNode)))
-        .then(function() {
-          toRemove.forEach(_remove)
-          toInsert.forEach(_insert)
-          ok(domNode)
-        })
-    })
+// debugger
+    return Promise
+      .all(removeOp(vnode, toRemove).concat(updateOp(vnode, toInsert.map(function(d) { return d.idx }))))
+      .then(function() {
+        toRemove.forEach(_remove)
+        toInsert.forEach(_insert)
+        return domNode
+      })
 }
 
 function replaceRoot(oldRoot, newRoot) {
