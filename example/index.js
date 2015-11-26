@@ -13,7 +13,7 @@ document.body.appendChild(rootNode)
 
 var update = function(newtree) {
     patches = diff(tree, newtree)
-    console.log('input', rootNode)
+
     var a = patch(rootNode, patches, { patch: defferedPatch })
 
     a.then(function(d) {

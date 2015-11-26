@@ -61,14 +61,11 @@ function applyPatch(vpatch, domNode, renderOptions) {
               .all(removeOp(vNode, domNode))
               .then(function() {
                 return removeNode(domNode, vNode)
-                console.log('REMOVENODE', domNode)
-                // return domNode
               })
         case VPatch.INSERT:
           return Promise
               .all(insertOp(patch, domNode))
               .then(function() {
-                console.log('INSERTNODE', domNode)
                 return insertNode(domNode, patch, renderOptions)
               })
         case VPatch.VTEXT:
@@ -85,7 +82,6 @@ function applyPatch(vpatch, domNode, renderOptions) {
           ['onEnter', 'onUpdate', 'onExit'].forEach(function(d) { delete patch[d] })
           if (!Object.keys(patch).length) return Promise.resolve(domNode)
 
-                console.log('PROPS', domNode)
           return Promise
               .all(updateOp(vNode, domNode))
               .then(function() {
