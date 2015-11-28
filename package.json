@@ -4,9 +4,9 @@
   "description": "Deffered virtual dom patching based on Promisses",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  , "example":"browserify example/index.js -o example/bundle.js -d"
-  , "dev": "watchify example/index.js -o example/bundle.js -d"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "example": "browserify example/index.js -o example/bundle.js -d",
+    "dev": "watchify example/index.js -o example/bundle.js -d"
   },
   "keywords": [
     "virtual-dom",
@@ -22,5 +22,9 @@
   "dependencies": {
     "virtual-dom": "^2.1.1",
     "x-is-array": "^0.1.0"
+  },
+  "devDependencies": {
+    "tween.js": "^16.3.1",
+    "velocity-animate": "^1.2.3"
   }
 }

@@ -8,52 +8,10 @@ var updateWidget = require("virtual-dom/vdom/update-widget")
 
 module.exports = applyPatch
 
-var getChildsOps = function(vNode, domNode, method) {
-  var ops = []
-
-  var getChildren = function(node, tree) {
-    if (!tree) return
-
-    var domNode
-
-    (node.children || []).forEach(function(child, idx) {
-      domNode = tree.children[idx]
-      if(child.properties && child.properties[method]) {
-        domNode && ops.push(child.properties[method](domNode));
-      } else if(domNode && domNode[method]) {
-        ops.push(domNode[method](domNode));
-      }
-      // c && getChildren(child, c);
-    })
-  }
-
-  var start = getChildren({ children: isArray(vNode) ? vNode : [vNode] }
-                         , { children: isArray(domNode) ? domNode : [domNode] })
-  return ops.reverse()
-}
-
-var removeOp = function(node, domNode) { return getChildsOps(node, domNode, 'onExit') }
-  , insertOp = function(node, domNode) { return getChildsOps(node, domNode, 'onEnter') }
-  , updateOp = function(node, domNode) { return getChildsOps(node, domNode, 'onUpdate') }
-
-var cause = 
-  [ "NONE"
-  , "VTEXT"
-  , "VNODE"
-  , "WIDGET"
-  , "PROPS"
-  , "ORDER"
-  , "INSERT"
-  , "REMOVE"
-  , "THUNK"
-  ]
-
 function applyPatch(vpatch, domNode, renderOptions) {
     var type = vpatch.type
     var vNode = vpatch.vNode
     var patch = vpatch.patch
-
-    console.log('applying patch:', cause[type])
 
     switch (type) {
         case VPatch.REMOVE:
@@ -63,33 +21,37 @@ function applyPatch(vpatch, domNode, renderOptions) {
                 return removeNode(domNode, vNode)
               })
         case VPatch.INSERT:
-          return Promise
-              .all(insertOp(patch, domNode))
-              .then(function() {
                 return insertNode(domNode, patch, renderOptions)
-              })
         case VPatch.VTEXT:
           return Promise
               .all(updateOp(patch, domNode.parentNode))
               .then(function() {
                 return stringPatch(domNode, vNode, patch, renderOptions)
               })
+        case VPatch.WIDGET:
+            return widgetPatch(domNode, vNode, patch, renderOptions)
         case VPatch.VNODE:
             return vNodePatch(domNode, vNode, patch, renderOptions)
         case VPatch.ORDER:
             return reorderChildren(domNode, patch, vNode)
         case VPatch.PROPS:
-          ['onEnter', 'onUpdate', 'onExit'].forEach(function(d) { delete patch[d] })
+          var removeInternals = function(obj) {
+            ['onEnter', 'onUpdate', 'onExit', 'key']
+              .forEach(function(d) { delete obj[d] })
+
+            return obj
+          }
+
+          patch = removeInternals(patch)
+
           if (!Object.keys(patch).length) return Promise.resolve(domNode)
 
           return Promise
-              .all(updateOp(vNode, domNode))
+              .all(updateOp(vNode, domNode, {old: patch, new: removeInternals(vNode.properties)}))
               .then(function() {
                 applyProperties(domNode, patch, vNode.properties)
                 return domNode
               })
-        case VPatch.WIDGET:
-            return widgetPatch(domNode, vNode, patch, renderOptions)
         case VPatch.THUNK:
             return replaceRoot(domNode,
                 renderOptions.patch(domNode, patch, renderOptions))
@@ -111,21 +73,15 @@ function removeNode(domNode, vNode) {
 }
 
 function insertNode(parentNode, vNode, renderOptions) {
-    var newNode = renderOptions.render(vNode, renderOptions)
-    
-    var props
+  var newNode = renderOptions.render(vNode, renderOptions)
 
-    if (props = vNode.properties) {
-      newNode.onEnter = props.onEnter
-      newNode.onUpdate = props.onUpdate
-      newNode.onExit = props.onExit
-    }
+  if (parentNode) parentNode.appendChild(newNode)
 
-    if (parentNode) {
-        parentNode.appendChild(newNode)
-    }
-
-    return parentNode
+  return Promise
+    .all(insertOp(vNode, newNode, vNode.properties || vNode))
+    .then(function() {
+      return parentNode
+    })
 }
 
 function stringPatch(domNode, leftVNode, vText, renderOptions) {
@@ -169,6 +125,49 @@ function widgetPatch(domNode, leftVNode, widget, renderOptions) {
     return newNode
 }
 
+
+function destroyWidget(domNode, w) {
+    if (typeof w.destroy === "function" && isWidget(w)) {
+        w.destroy(domNode)
+    }
+}
+
+function replaceRoot(oldRoot, newRoot) {
+    if (oldRoot && newRoot && oldRoot !== newRoot && oldRoot.parentNode) {
+        oldRoot.parentNode.replaceChild(newRoot, oldRoot)
+    }
+
+    return newRoot;
+}
+
+var getChildsOps = function(vNode, domNode, method, props) {
+  var ops = []
+
+  var getChildren = function(node, tree) {
+    if (!tree) return
+
+    var domNode
+
+    (node.children || []).forEach(function(child, idx) {
+      domNode = tree.children[idx]
+      if(child.properties && child.properties[method] && domNode) {
+        ops.push(child.properties[method](domNode, props || child.properties))
+      } else if(domNode && domNode[method]) {
+        ops.push(domNode[method](domNode, props || child.properties))
+      }
+      // c && getChildren(child, c);
+    })
+  }
+
+  var start = getChildren({ children: isArray(vNode) ? vNode : [vNode] }
+                         ,{ children: isArray(domNode) ? domNode : [domNode] })
+  return ops.reverse()
+}
+
+var removeOp = function(node, domNode, props) { return getChildsOps(node, domNode, 'onExit', props) }
+  , insertOp = function(node, domNode, props) { return getChildsOps(node, domNode, 'onEnter', props) }
+  , updateOp = function(node, domNode, props) { return getChildsOps(node, domNode, 'onUpdate', props) }
+
 function vNodePatch(domNode, leftVNode, vNode, renderOptions) {
     var parentNode = domNode.parentNode
 
@@ -185,60 +184,42 @@ function vNodePatch(domNode, leftVNode, vNode, renderOptions) {
       })
 }
 
-function destroyWidget(domNode, w) {
-    if (typeof w.destroy === "function" && isWidget(w)) {
-        w.destroy(domNode)
-    }
-}
-
-
 function reorderChildren(domNode, moves, vnode) {
     var childNodes = domNode.childNodes
-    var keyMap = {}
-    var node
-    var remove
-    var insert
+      , node
+      , remove
 
     var toRemove = []
-      , _remove = function(node) { domNode.removeChild(node) }
 
     for (var i = 0; i < moves.removes.length; i++) {
         remove = moves.removes[i]
         node = childNodes[remove.from]
-        if (remove.key) {
-            keyMap[remove.key] = node
-        }
-        
-        if(toRemove.indexOf(node) == -1) toRemove.push(node)
+        if (!remove.key) toRemove.push(node)
     }
-
-    var toInsert = []
-      , _insert = function(desc) { domNode.insertBefore(desc.node, desc.idx) }
-
-    var length = childNodes.length
-
-    for (var j = 0; j < moves.inserts.length; j++) {
-        insert = moves.inserts[j]
-        node = keyMap[insert.key]
-
-        // this is the weirdest bug i've ever seen in webkit
-        var idx = insert.to >= length++ ? null : childNodes[insert.to]
-        toInsert.push({ node: node, idx: idx })
-    }
-// debugger
+    //TO CONSIDER: hook for reordering
     return Promise
-      .all(removeOp(vnode, toRemove).concat(updateOp(vnode, toInsert.map(function(d) { return d.idx }))))
+      .all(removeOp(vnode, toRemove))
       .then(function() {
-        toRemove.forEach(_remove)
-        toInsert.forEach(_insert)
+        var keyMap = {}
+        var insert
+        for (var i = 0; i < moves.removes.length; i++) {
+            remove = moves.removes[i]
+            node = childNodes[remove.from]
+            if (remove.key) {
+                keyMap[remove.key] = node
+            }
+            domNode.removeChild(node)
+        }
+
+        var length = childNodes.length
+        for (var j = 0; j < moves.inserts.length; j++) {
+            insert = moves.inserts[j]
+            node = keyMap[insert.key]
+            // this is the weirdest bug i've ever seen in webkit
+            domNode.insertBefore(node, insert.to >= length++ ? null : childNodes[insert.to])
+        }
+        // toRemove.forEach(_remove)
+        // toInsert.forEach(_insert)
         return domNode
       })
-}
-
-function replaceRoot(oldRoot, newRoot) {
-    if (oldRoot && newRoot && oldRoot !== newRoot && oldRoot.parentNode) {
-        oldRoot.parentNode.replaceChild(newRoot, oldRoot)
-    }
-
-    return newRoot;
 }

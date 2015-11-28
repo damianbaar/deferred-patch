@@ -1,0 +1,91 @@
+var f1 = function(state, update) {
+  //this
+  state.focused.set(false)
+
+  state._.async() // -> done
+
+  state._.this(function() {
+
+  })
+
+  state._.window(function(state, update) {
+    this //window
+    state({ location: this.location })
+    this.addEventListener('something')
+
+    return function dispose() {
+      this.removeEventLisener('something')
+    }
+  })
+}
+
+var f2 = function (state, loop) {
+  //this -> vdom context
+  var unlock = loop.block()
+  unlock()
+
+  loop(
+    state
+      .loading.set(false)
+      .focused.set(false)
+  , function(state, loop) {
+    //this -> real dom
+    loop(state)
+    return function dispose() {
+    }
+  })
+}
+
+//main selection can keep some global things
+
+var f1 = function(state, update) {
+  //this
+  state.focused.set(false)
+
+  state._.redraw()
+  state._.async() // -> done
+  state._.window(function(window) {
+    return function dispose() {
+    }
+  })
+}
+
+
+#### invalidation
+
+scenario 1: (show me the use case ...)
+//f1 -> f2 -> f3 (redraw)(keep index) -> 
+//  -> f1 (redraw = true) -> f2 (redraw = true) -> f3 (ignored) -> f4 (if clean ignore otherwise f1)
+
+
+var ecosystem = {
+  window: new window() //proxy
+, document: new document() //proxy
+, service: new service()
+}
+
+//blacklist async/redraw
+var state = ObservStruct({
+    focused: Observ(false)
+    data: Observ([1,2,3,4])
+})
+
+state.makeArray
+state.makeObject
+state.simpleType
+
+//listener
+state.focused(function (current) {
+  console.log("focused", current)
+})
+
+//initialization
+var c = new c([f1])
+  , to = c('#selector', ecosystem)
+  , u = to(state, ecosystem)
+
+//update
+state(function (current) {
+  u(current)
+})
+

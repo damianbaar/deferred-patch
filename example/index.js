@@ -11,82 +11,94 @@ var patches
 
 document.body.appendChild(rootNode)
 
+var busy = false
 var update = function(newtree) {
+    if(busy) return false
+
     patches = diff(tree, newtree)
 
+    busy = true
     var a = patch(rootNode, patches, { patch: defferedPatch })
 
     a.then(function(d) {
       console.log('### render', d)
       rootNode = d
+      busy = false
     })
+      // console.log('### render', a)
+      // rootNode = a
 
     tree = newtree
   }
 
+var Velocity = require('velocity-animate')
+
 var onEnter = function(delay) {
-  return function(node) {
+  return function(node, props) {
+    console.log('onEnter', node)
     return new Promise(function(ok, err) {
-      console.log('onEnter', node)
-      node.style.color = '#00FF00'
-      setTimeout(ok, delay)
+      node.style.opacity = 0
+      Velocity(node, 
+        { opacity: 1, color: '#00FF00' }
+      , { complete: ok }
+      )
     })
   }
 }
 
 var onUpdate = function(delay) {
-  return function(node) {
-    console.log('onUpdate', node)
+  return function(node, props) {
+    console.log('onUpdate', node, props)
     return new Promise(function(ok, err) {
-      node.style.color = '#0000FF'
-      setTimeout(ok, delay)
+      var color = '#' + Math.floor(Math.random()*16777215).toString(16)
+      Velocity(node, 
+        { color: color }
+      , { complete: ok }
+      )
     })
   }
 }
 
 var onExit = function(delay) {
   return function(node) {
+    //temp workaroudn
+    if(!document.contains(node)) return Promise.resolve()
     console.log('onExit', node)
+
     return new Promise(function(ok, err) {
-      node.style.color = '#FF0000'
-      setTimeout(ok, delay)
+      Velocity(node, 
+        { opacity: 0, color: '#FF0000' }
+      , { complete: ok() }
+      )
     })
   }
   }
 
 
-var cumulativeDelay = function(val) { this.total = 0 }
-cumulativeDelay.prototype.take = function(val) { this.total += val; return val }
-
-var delay = new cumulativeDelay()
-
 var lifecycle = function(custom) {
   return Object.assign(custom || {}, {    
-      onEnter: onEnter(delay.take(100*Math.random()))
-    , onUpdate: onUpdate(delay.take(100*Math.random()))
-    , onExit: onExit(delay.take(100*Math.random()))
+      onEnter: onEnter(100)
+    , onUpdate: onUpdate(100)
+    , onExit: onExit(100)
   })
 }
 
 var c = 0
 function run() {
-  var root = 
-    h('span', lifecycle(),
-     [ h('div', lifecycle(), ['child1']),
-       h('div', lifecycle(), ['child2']),
-       h('div', lifecycle(), ['child3']),
-       h('div', lifecycle(), ['child4']),
-       h('div', lifecycle(), ['child2']),
-       h('div', lifecycle(), ['child3']),
-       h('div', lifecycle(), ['child4']),
-       h('div', lifecycle(), ['child5']),
-       h('button', {'onclick': function() { run(c++) }}, ['redraw'])
-     ])
-  if (c % 2 == 0) update(root)
-  else {
-    root.children.reverse()
-    update(root)
-  }
+  var root = h('span', lifecycle())
+    , kids = 
+     [ h('div', lifecycle({key:1, styles: c > 1 ? ['ab','cd'] : ['awesome']}), ['child1']),
+       h('div', lifecycle({key:2, iteration: c}), ['child2']),
+       h('div', lifecycle({key:3, data: Math.random()}), ['child3']),
+       h('button', {key:4, 'onclick': function() { run(c++) }}, ['redraw'])
+     ]
+
+  if (c % 2 == 0) kids = kids.concat([
+   h('div', lifecycle(), ['short lived kid'])
+  ]).reverse()
+
+  root.children = kids 
+  update(root)
 }
 
 run(c++)

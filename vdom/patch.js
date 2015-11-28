@@ -8,18 +8,6 @@ module.exports = defferedPatch
 
 var opNo = 0
 
-var cause = 
-  [ "NONE"
-  , "VTEXT"
-  , "VNODE"
-  , "WIDGET"
-  , "PROPS"
-  , "ORDER"
-  , "INSERT"
-  , "REMOVE"
-  , "THUNK"
-  ]
-
 function defferedPatch(rootNode, patches, renderOptions) {
     console.log('--------> operation no', opNo++)
 
@@ -35,28 +23,7 @@ function defferedPatch(rootNode, patches, renderOptions) {
     if (!renderOptions.document && ownerDocument !== document) {
         renderOptions.document = ownerDocument
     }
-    
-    // var __patches = []
-    // for(var i = 0; i < indices.length; i++){
-    //   var idx = indices[i]
-    //     , patch = patches[idx]
-    //   
-    //   if(isArray(patch)) {
-    //     patch.forEach(function(d) { console.log('update', cause[d.type]) })
-    //   } else {
-    //     console.log('update', cause[patch.type])
-    //   }
-    // }
 
-    var sort = function(a,b) {
-      if (a.type > b.type) return 1
-      if (a.type < b.type) return -1
-      return 0
-    }
-
-    // .reverse()
-    //
-    //
     var __p = []
 
     indices.forEach(function(d) {
@@ -74,7 +41,7 @@ function defferedPatch(rootNode, patches, renderOptions) {
       return function(__rootNode) {
         return function(ok) {
           var __c = applyPatch(index[d.idx], d.patch, renderOptions)
-          if(__c.then) {
+          if(__c && __c.then) {
             __c.then(function(node) {
               ok(__rootNode)
             })
@@ -84,7 +51,7 @@ function defferedPatch(rootNode, patches, renderOptions) {
         }
       }
     })
-
+    
     return new Promise(function(ok, err) {
       var p = Promise.resolve(rootNode)
         , z = 0
@@ -99,6 +66,8 @@ function defferedPatch(rootNode, patches, renderOptions) {
       }
 
       takeNext(p)
+    }).then(function(dom) {
+      return dom
     })
 }
 
