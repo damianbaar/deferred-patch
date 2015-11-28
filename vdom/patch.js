@@ -13,9 +13,7 @@ function defferedPatch(rootNode, patches, renderOptions) {
 
     var indices = patchIndices(patches)
 
-    if (indices.length === 0) {
-        return Promise.all([Promise.resolve(rootNode)])
-    }
+    if (indices.length === 0) { return Promise.resolve(rootNode) }
 
     var index = domIndex(rootNode, patches.a, indices)
     var ownerDocument = rootNode.ownerDocument
@@ -87,13 +85,3 @@ function patchIndices(patches) {
 
     return indices
 }
-
-  // patchList = patchList.filter(function(p) {
-  //   var a = Object.keys(p.patch.properties || {})
-  //     , lc = ['onEnter', 'onUpdate', 'onExit']
-  //     , c = 0
-  //
-  //   a.forEach(function(d) { if (lc.indexOf(d) > -1) c++ })
-  //   if (a.length == c && c > 0) return false
-  //   return true
-  // })

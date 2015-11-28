@@ -12,12 +12,14 @@ var patches
 document.body.appendChild(rootNode)
 
 var busy = false
+
 var update = function(newtree) {
     if(busy) return false
 
     patches = diff(tree, newtree)
 
     busy = true
+
     var a = patch(rootNode, patches, { patch: defferedPatch })
 
     a.then(function(d) {
@@ -25,8 +27,6 @@ var update = function(newtree) {
       rootNode = d
       busy = false
     })
-      // console.log('### render', a)
-      // rootNode = a
 
     tree = newtree
   }
@@ -35,12 +35,13 @@ var Velocity = require('velocity-animate')
 
 var onEnter = function(delay) {
   return function(node, props) {
-    console.log('onEnter', node)
+    console.log('onEnter', props, node)
     return new Promise(function(ok, err) {
       node.style.opacity = 0
+      ok()
       Velocity(node, 
-        { opacity: 1, color: '#00FF00' }
-      , { complete: ok }
+        { opacity: 1, backgroundColor: props.color, width: props.data }
+      // , { complete: ok }
       )
     })
   }
@@ -49,11 +50,12 @@ var onEnter = function(delay) {
 var onUpdate = function(delay) {
   return function(node, props) {
     console.log('onUpdate', node, props)
+    debugger
     return new Promise(function(ok, err) {
-      var color = '#' + Math.floor(Math.random()*16777215).toString(16)
+      ok()
       Velocity(node, 
-        { color: color }
-      , { complete: ok }
+        { backgroundColor: props.new.color, width: props.new.data }
+      // , { complete: ok }
       )
     })
   }
@@ -64,11 +66,11 @@ var onExit = function(delay) {
     //temp workaroudn
     if(!document.contains(node)) return Promise.resolve()
     console.log('onExit', node)
-
     return new Promise(function(ok, err) {
+      // ok()
       Velocity(node, 
-        { opacity: 0, color: '#FF0000' }
-      , { complete: ok() }
+        { opacity: 0, color: '#FF0000', width: 0 }
+      , { complete: ok }
       )
     })
   }
@@ -84,20 +86,22 @@ var lifecycle = function(custom) {
 }
 
 var c = 0
+
 function run() {
   var root = h('span', lifecycle())
-    , kids = 
-     [ h('div', lifecycle({key:1, styles: c > 1 ? ['ab','cd'] : ['awesome']}), ['child1']),
-       h('div', lifecycle({key:2, iteration: c}), ['child2']),
-       h('div', lifecycle({key:3, data: Math.random()}), ['child3']),
-       h('button', {key:4, 'onclick': function() { run(c++) }}, ['redraw'])
-     ]
+    , kids = []
 
-  if (c % 2 == 0) kids = kids.concat([
-   h('div', lifecycle(), ['short lived kid'])
-  ]).reverse()
+  for (var i = 0; i < 5;i ++) {
+     var color = '#' + Math.floor(Math.random()*16777215).toString(16)
+     kids.push(h('div.bar', lifecycle({key:i, data: 50 + 50*i*Math.random(), color: color}), ['Bar'+i]))
+  }
 
-  root.children = kids 
+  if (c % 2 == 0)
+    kids.push(h('div.bar', lifecycle({data: 100 + 50*Math.random(), color: '#FF0000'}), ['Bar'+i]))
+
+  redraw = h('button', {key:'redraw', 'onclick': function() { run(c++) }}, ['redraw'])
+
+  root.children = [h('div.container', kids), redraw]
   update(root)
 }
 

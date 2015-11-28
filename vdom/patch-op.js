@@ -60,6 +60,36 @@ function applyPatch(vpatch, domNode, renderOptions) {
     }
 }
 
+//haha stoped to understand what it is doing, rewrite it!
+var getChildsOps = function(vNode, domNode, method, props, deep) {
+  var ops = []
+
+  var getChildren = function(node, tree) {
+    if (!tree) return
+
+    var domNode
+
+    (node.children || []).forEach(function(child, idx) {
+      domNode = tree.children[idx]
+      if(child.properties && child.properties[method] && domNode) {
+        //sometimes there are two updates, first one related to tag.class is not relevant, so skipping it
+        var skip = Object.keys(props || {}).length == 1 && (props || {}).className;
+        ops.push(child.properties[method](domNode, skip ? (child.properties || props) : (props || child.properties)))
+      } else if(domNode && domNode[method]) {
+        ops.push(domNode[method](domNode, props || child.properties))
+      }
+      deep && getChildren(child, domNode);
+    })
+  }
+
+  var start = getChildren({ children: isArray(vNode) ? vNode : [vNode] }
+                         ,{ children: isArray(domNode) ? domNode : [domNode] })
+  return ops.reverse()
+}
+
+var removeOp = function(node, domNode, props, deep) { return getChildsOps(node, domNode, 'onExit', props, deep) }
+  , insertOp = function(node, domNode, props, deep) { return getChildsOps(node, domNode, 'onEnter', props, deep) }
+  , updateOp = function(node, domNode, props, deep) { return getChildsOps(node, domNode, 'onUpdate', props, deep) }
 function removeNode(domNode, vNode) {
     var parentNode = domNode.parentNode
 
@@ -78,7 +108,7 @@ function insertNode(parentNode, vNode, renderOptions) {
   if (parentNode) parentNode.appendChild(newNode)
 
   return Promise
-    .all(insertOp(vNode, newNode, vNode.properties || vNode))
+    .all(insertOp(vNode, newNode, vNode.properties || vNode, true))
     .then(function() {
       return parentNode
     })
@@ -140,34 +170,6 @@ function replaceRoot(oldRoot, newRoot) {
     return newRoot;
 }
 
-var getChildsOps = function(vNode, domNode, method, props) {
-  var ops = []
-
-  var getChildren = function(node, tree) {
-    if (!tree) return
-
-    var domNode
-
-    (node.children || []).forEach(function(child, idx) {
-      domNode = tree.children[idx]
-      if(child.properties && child.properties[method] && domNode) {
-        ops.push(child.properties[method](domNode, props || child.properties))
-      } else if(domNode && domNode[method]) {
-        ops.push(domNode[method](domNode, props || child.properties))
-      }
-      // c && getChildren(child, c);
-    })
-  }
-
-  var start = getChildren({ children: isArray(vNode) ? vNode : [vNode] }
-                         ,{ children: isArray(domNode) ? domNode : [domNode] })
-  return ops.reverse()
-}
-
-var removeOp = function(node, domNode, props) { return getChildsOps(node, domNode, 'onExit', props) }
-  , insertOp = function(node, domNode, props) { return getChildsOps(node, domNode, 'onEnter', props) }
-  , updateOp = function(node, domNode, props) { return getChildsOps(node, domNode, 'onUpdate', props) }
-
 function vNodePatch(domNode, leftVNode, vNode, renderOptions) {
     var parentNode = domNode.parentNode
 
@@ -215,11 +217,9 @@ function reorderChildren(domNode, moves, vnode) {
         for (var j = 0; j < moves.inserts.length; j++) {
             insert = moves.inserts[j]
             node = keyMap[insert.key]
-            // this is the weirdest bug i've ever seen in webkit
             domNode.insertBefore(node, insert.to >= length++ ? null : childNodes[insert.to])
         }
-        // toRemove.forEach(_remove)
-        // toInsert.forEach(_insert)
+
         return domNode
       })
 }

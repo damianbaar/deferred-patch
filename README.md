@@ -3,15 +3,35 @@
 Proof of concept or playground rather than lib (yet). Goal is to make `virtual-dom` patching fully asynchronous to be able to create more rich user expirience enhanced by animations. 
 `deffered-patch` does not include any logic for rendering queues, basically if you would like to revalidate/make a new patch you have to be sure that previous rendering phase ended. For now it is intentional to delegate such logic in some other place 
 
-##### TODO
-* implement `enter`/`update`/`exit` for each node - 'remove' partially done
-
 ```js
 var h = require('virtual-dom/h')
   , diff = require('virtual-dom/diff')
   , patch = require('virtual-dom/patch')
   , createElement = require('virtual-dom/create-element')
+  , Velocity = require('velocity-animate')
 
+var onUpdate = function(delay) {
+  return function(node, props) {
+    return new Promise(function(next) {
+      next() //parallel - all nodes will animate in the same moment
+      Velocity(node, 
+        { backgroundColor: props.new.color, width: props.new.data }
+      //or , { complete: ok } //series - promise after promise
+      )
+    })
+  }
+}
+
+var onEnter //similar to update
+  , onExit  //similar to update
+
+var lifecycle = function(custom) {
+  return Object.assign(custom || {}, {    
+      onEnter: onEnter(100)
+    , onUpdate: onUpdate(100)
+    , onExit: onExit(100)
+  })
+}
 var patches
   , tree = h('span')
   , rootNode = createElement(tree)
@@ -28,31 +48,8 @@ var update = function(newtree) {
     tree = newtree
   }
 
-var onRemove = function(delay) {
-  return function(node) {
-    return new Promise(function(ok, err) {
-      node.style.color = '#DDEEFF' //marked to be removed
-
-      setTimeout(function() {
-        node.style.color = '#FF0000'
-        setTimeout(ok, 200)
-      }, delay)
-    })
-  }
-  }
-
   update(h('span', 
-           [ h('div', {onRemove:onRemove(100)}, ['child1']),
-             h('div', {onRemove:onRemove(200)}, ['child2']),
-             h('div', {}, [ 
-               h('div', {onRemove:onRemove(300)}, ['nested child1']),
-               h('div', {}, [ h('div', {}, [ 
-                 h('div', {onRemove:onRemove(500)}, ['nested child1']),
-                 h('div', {onRemove:onRemove(600)}, ['nested child2']),
-                 ])
-               ])
-             ])
-           ]))
+           [ h('div', lifecycle({key: 1}), ['child1']) ]))
 
   update(h('span'))
 
