@@ -13,7 +13,7 @@ var run = function(vNode, domNode, method) {
       if(child.properties && child.properties[method] && domNode)
         ops.push(child.properties[method](domNode, child.properties))
 
-      getHooks(child.children, domNode.children);
+      getHooks(child, domNode);
     })
   }
 

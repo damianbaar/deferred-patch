@@ -13,9 +13,9 @@ function applyPatch(vpatch, domNode, renderOptions) {
 
     switch (type) {
         case VPatch.REMOVE:
-          return require('./patch/remove')(domNode, vpatch, renderOptions)
+          return require('./patch/exit')(domNode, vpatch, renderOptions)
         case VPatch.INSERT:
-          return require('./patch/insert')(domNode, vpatch, renderOptions)
+          return require('./patch/enter')(domNode, vpatch, renderOptions)
         case VPatch.PROPS:
           return require('./patch/update')(domNode, vpatch, renderOptions)
         case VPatch.VTEXT:
