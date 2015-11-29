@@ -1,50 +1,38 @@
-
 var applyProperties = require("virtual-dom/vdom/apply-properties")
-var isArray = require("x-is-array")
+  , isArray = require("x-is-array")
+  , traverse = require('./traverse-dom-vdom')
 
-var run = function(vNode, domNode, method, props) {
-  var toUpdate = []
-    , toArray = function(val) { return isArray(val) ? val : [val] }
-
-  var getHooks = function(node, tree) {
-    if (!tree) return
-
-    var domNode
-
-    (node.children || []).forEach(function(child, idx) {
-      domNode = tree.children[idx]
-      if(domNode && domNode[method])
-        toUpdate.push(domNode[method](domNode, props || child.properties))
-    })
-  }
-
-  getHooks({ children: toArray(vNode) }
-          ,{ children: toArray(domNode) })
-
-  return toUpdate
+var onUpdate = function(node, domNode, props) { 
+  return traverse(node, domNode, function(vNode, domNode) {
+    if(domNode && domNode.onUpdate) return domNode.onUpdate(domNode, props)
+  })
 }
 
-var onUpdate = function(node, domNode, props, deep) { 
-  return run(node, domNode, 'onUpdate', props) 
+var removeLifecycle = function(obj) {
+  ['onEnter', 'onUpdate', 'onExit', 'key']
+    .forEach(function(d) { delete obj[d] })
+
+  return obj
+}
+
+var combineState = function(_new, _old) {
+  return { new: removeLifecycle(_new)
+         , old:removeLifecycle(_old)}
 }
 
 module.exports = function(domNode, vpatch) {
   var vNode = vpatch.vNode
   var patch = vpatch.patch
 
-  var removeInternals = function(obj) {
-    ['onEnter', 'onUpdate', 'onExit', 'key']
-      .forEach(function(d) { delete obj[d] })
 
-    return obj
-  }
-
-  patch = removeInternals(patch)
+  patch = removeLifecycle(patch)
 
   if (!Object.keys(patch).length) return Promise.resolve(domNode)
 
+  var s = combineState(patch, vNode.properties)
+
   return Promise
-      .all(onUpdate(vNode, domNode, {new: patch, old: removeInternals(vNode.properties)}))
+      .all(onUpdate(vNode, domNode, s))
       .then(function() {
         applyProperties(domNode, patch, vNode.properties)
         return domNode

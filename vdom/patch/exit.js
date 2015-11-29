@@ -1,34 +1,13 @@
 var destroyWidget = require('./destroy-widget')
   , isArray = require("x-is-array")
-
-var run = function(vNode, domNode, method) {
-  var hooks = []
-    , toArray = function(val) { return isArray(val) ? val : [val] }
-
-  var getHooks = function(node, tree) {
-    if (!tree) return
-
-    var domNode
-      , props
-
-    (node.children || []).forEach(function(child, idx) {
-      domNode = tree.children[idx]
-      props = child.properties 
-
-      if(!(domNode && props && props[method])) return
-
-      hooks.push(child.properties[method](domNode, child.properties))
-    })
-  }
-
-  getHooks({ children: toArray(vNode) }
-          ,{ children: toArray(domNode) })
-
-  return hooks
-}
+  , traverse = require('./traverse-dom-vdom')
 
 var onExit = function(node, domNode) { 
-  return run(node, domNode, 'onExit') 
+  return traverse(node, domNode, function(vNode, domNode) {
+    var props = vNode.properties 
+    if(!(domNode && props && props.onExit)) return
+    return props.onExit(domNode, props)
+  })
 }
 
 module.exports = function(domNode, vpatch, renderOptions) {

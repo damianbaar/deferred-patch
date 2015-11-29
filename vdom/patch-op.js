@@ -12,7 +12,7 @@ var patches = (function() {
   patches[VPatch.REMOVE] = require('./patch/exit')
   patches[VPatch.INSERT] = require('./patch/enter')
   patches[VPatch.PROPS] = require('./patch/update')
-
+  
   return patches  
 })()
 
