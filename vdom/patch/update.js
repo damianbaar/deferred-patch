@@ -16,7 +16,7 @@ var removeLifecycle = function(obj) {
 
 var combineState = function(_new, _old) {
   return { new: removeLifecycle(_new)
-         , old:removeLifecycle(_old)}
+         , old: removeLifecycle(_old)}
 }
 
 module.exports = function(domNode, vpatch) {
