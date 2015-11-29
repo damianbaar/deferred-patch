@@ -50,7 +50,6 @@ var onEnter = function(delay) {
 var onUpdate = function(delay) {
   return function(node, props) {
     console.log('onUpdate', node, props)
-    debugger
     return new Promise(function(ok, err) {
       ok()
       Velocity(node, 

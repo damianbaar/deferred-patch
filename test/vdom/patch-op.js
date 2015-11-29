@@ -112,7 +112,6 @@ test("fire onExit method whilist inserting a new dom node", function (assert) {
         assert.equal(1, updateStart.callCount)
         assert.equal(1, updateEnd.callCount)
 
-
         var args = updateStart.getCall(0).args
           , _old = args[1].old
           , _new = args[1].new

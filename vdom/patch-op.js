@@ -1,7 +1,5 @@
-var applyProperties = require("virtual-dom/vdom/apply-properties")
 var isArray = require("x-is-array")
 
-var isWidget = require("virtual-dom/vnode/is-widget")
 var VPatch = require("virtual-dom/vnode/vpatch")
 
 var updateWidget = require("virtual-dom/vdom/update-widget")
@@ -15,13 +13,11 @@ function applyPatch(vpatch, domNode, renderOptions) {
 
     switch (type) {
         case VPatch.REMOVE:
-          return Promise
-              .all(removeOp(vNode, domNode))
-              .then(function() {
-                return removeNode(domNode, vNode)
-              })
+          return require('./patch/remove')(domNode, vpatch, renderOptions)
         case VPatch.INSERT:
-                return insertNode(domNode, patch, renderOptions)
+          return require('./patch/insert')(domNode, vpatch, renderOptions)
+        case VPatch.PROPS:
+          return require('./patch/update')(domNode, vpatch, renderOptions)
         case VPatch.VTEXT:
           return Promise
               .all(updateOp(patch, domNode.parentNode))
@@ -34,85 +30,12 @@ function applyPatch(vpatch, domNode, renderOptions) {
             return vNodePatch(domNode, vNode, patch, renderOptions)
         case VPatch.ORDER:
             return reorderChildren(domNode, patch, vNode)
-        case VPatch.PROPS:
-          var removeInternals = function(obj) {
-            ['onEnter', 'onUpdate', 'onExit', 'key']
-              .forEach(function(d) { delete obj[d] })
-
-            return obj
-          }
-
-          patch = removeInternals(patch)
-
-          if (!Object.keys(patch).length) return Promise.resolve(domNode)
-
-          return Promise
-              .all(updateOp(vNode, domNode, {new: patch, old: removeInternals(vNode.properties)}))
-              .then(function() {
-                applyProperties(domNode, patch, vNode.properties)
-                return domNode
-              })
         case VPatch.THUNK:
             return replaceRoot(domNode,
                 renderOptions.patch(domNode, patch, renderOptions))
         default:
             return domNode
     }
-}
-
-//haha stoped to understand what it is doing, rewrite it!
-var getChildsOps = function(vNode, domNode, method, props, deep) {
-  var ops = []
-
-  var getChildren = function(node, tree) {
-    if (!tree) return
-
-    var domNode
-
-    (node.children || []).forEach(function(child, idx) {
-      domNode = tree.children[idx]
-      if(child.properties && child.properties[method] && domNode) {
-        //sometimes there are two updates, first one related to tag.class is not relevant, so skipping it
-        var skip = Object.keys(props || {}).length == 1 && (props || {}).className;
-        ops.push(child.properties[method](domNode, skip ? (child.properties || props) : (props || child.properties)))
-      } else if(domNode && domNode[method]) {
-        ops.push(domNode[method](domNode, props || child.properties))
-      }
-      deep && getChildren(child.children, domNode.children);
-    })
-  }
-
-  var start = getChildren({ children: isArray(vNode) ? vNode : [vNode] }
-                         ,{ children: isArray(domNode) ? domNode : [domNode] })
-  return ops.reverse()
-}
-
-var removeOp = function(node, domNode, props, deep) { return getChildsOps(node, domNode, 'onExit', props, deep) }
-  , insertOp = function(node, domNode, props, deep) { return getChildsOps(node, domNode, 'onEnter', props, deep) }
-  , updateOp = function(node, domNode, props, deep) { return getChildsOps(node, domNode, 'onUpdate', props, deep) }
-
-function removeNode(domNode, vNode) {
-    var parentNode = domNode.parentNode
-
-    if (parentNode) {
-        parentNode.removeChild(domNode)
-    }
-
-    destroyWidget(domNode, vNode);
-
-    return null
-}
-
-function insertNode(parentNode, vNode, renderOptions) {
-  var newNode = renderOptions.render(vNode, renderOptions)
-
-  if (parentNode) parentNode.appendChild(newNode)
-
-  return Promise
-    .all(insertOp(vNode, newNode, vNode.properties || vNode, true))
-    .then(function() {
-      return parentNode
-    })
 }
 
 function stringPatch(domNode, leftVNode, vText, renderOptions) {
@@ -155,7 +78,6 @@ function widgetPatch(domNode, leftVNode, widget, renderOptions) {
 
     return newNode
 }
-
 
 function destroyWidget(domNode, w) {
     if (typeof w.destroy === "function" && isWidget(w)) {
