@@ -1,1 +1,3 @@
-require("./vdom/patch-op-index")
+
+require("./vdom/patch-op")
+

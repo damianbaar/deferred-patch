@@ -88,7 +88,7 @@ var lifecycle = function(custom) {
 var c = 0
 
 function run() {
-  var root = h('span', lifecycle())
+  var root = h('span.root') //dont attach lifecycle to root
     , kids = []
 
   for (var i = 0; i < 5;i ++) {

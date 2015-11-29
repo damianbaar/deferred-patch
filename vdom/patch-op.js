@@ -47,7 +47,7 @@ function applyPatch(vpatch, domNode, renderOptions) {
           if (!Object.keys(patch).length) return Promise.resolve(domNode)
 
           return Promise
-              .all(updateOp(vNode, domNode, {old: patch, new: removeInternals(vNode.properties)}))
+              .all(updateOp(vNode, domNode, {new: patch, old: removeInternals(vNode.properties)}))
               .then(function() {
                 applyProperties(domNode, patch, vNode.properties)
                 return domNode
@@ -78,7 +78,7 @@ var getChildsOps = function(vNode, domNode, method, props, deep) {
       } else if(domNode && domNode[method]) {
         ops.push(domNode[method](domNode, props || child.properties))
       }
-      deep && getChildren(child, domNode);
+      deep && getChildren(child.children, domNode.children);
     })
   }
 
@@ -90,6 +90,7 @@ var getChildsOps = function(vNode, domNode, method, props, deep) {
 var removeOp = function(node, domNode, props, deep) { return getChildsOps(node, domNode, 'onExit', props, deep) }
   , insertOp = function(node, domNode, props, deep) { return getChildsOps(node, domNode, 'onEnter', props, deep) }
   , updateOp = function(node, domNode, props, deep) { return getChildsOps(node, domNode, 'onUpdate', props, deep) }
+
 function removeNode(domNode, vNode) {
     var parentNode = domNode.parentNode
 

@@ -13,10 +13,10 @@ var h = require('virtual-dom/h')
 var onUpdate = function(delay) {
   return function(node, props) {
     return new Promise(function(next) {
-      next() //parallel - all nodes will animate in the same moment
+      next() //parallel
       Velocity(node, 
         { backgroundColor: props.new.color, width: props.new.data }
-      //or , { complete: ok } //series - promise after promise
+      //or , { complete: ok } //in series
       )
     })
   }
@@ -44,13 +44,11 @@ var update = function(newtree) {
     //defferedPatch is a Promise
     var defferedPatch = patch(rootNode, patches, { patch: require('deffered-patch') })
 
-    defferedPatch.then(function(d) { rootNode = d[0] }) //Promise.all this is why there is an array, temp solution
+    defferedPatch.then(function(node) { rootNode = node })
     tree = newtree
   }
 
   update(h('span', 
            [ h('div', lifecycle({key: 1}), ['child1']) ]))
-
-  update(h('span'))
 
 ```
