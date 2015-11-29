@@ -2,7 +2,7 @@ var destroyWidget = require('./destroy-widget')
   , isArray = require("x-is-array")
 
 var run = function(vNode, domNode, method) {
-  var removes = []
+  var hooks = []
     , toArray = function(val) { return isArray(val) ? val : [val] }
 
   var getHooks = function(node, tree) {
@@ -17,14 +17,14 @@ var run = function(vNode, domNode, method) {
 
       if(!(domNode && props && props[method])) return
 
-      removes.push(child.properties[method](domNode, child.properties))
+      hooks.push(child.properties[method](domNode, child.properties))
     })
   }
 
   getHooks({ children: toArray(vNode) }
           ,{ children: toArray(domNode) })
 
-  return removes.reverse()
+  return hooks.reverse()
 }
 
 var onExit = function(node, domNode) { 

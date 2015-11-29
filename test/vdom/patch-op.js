@@ -17,6 +17,7 @@ function assertPachedNodeIsMarked(leftNode, rightNode, assert) {
     return patch(root, patches, { document: document, patch: defferedPatch })
 }
 
+
 test("fire onEnter method whilist inserting a new dom node", function (assert) {
   var enterStart = sinon.spy()
     , enterEnd = sinon.spy()
@@ -51,7 +52,7 @@ test("fire onEnter method whilist inserting a new dom node", function (assert) {
       })
 })
 
-test("fire onExit method whilist inserting a new dom node", function (assert) {
+test("fire onExit method whilist removing a dom node", function (assert) {
   var exitStart = sinon.spy()
     , exitEnd = sinon.spy()
 
@@ -85,7 +86,7 @@ test("fire onExit method whilist inserting a new dom node", function (assert) {
       })
 })
 
-test("fire onExit method whilist inserting a new dom node", function (assert) {
+test("fire onUpdate method whilist updating a props", function (assert) {
   var updateStart = sinon.spy()
     , updateEnd = sinon.spy()
 
