@@ -1,6 +1,5 @@
 var destroyWidget = require('./destroy-widget')
-  , isArray = require("x-is-array")
-  , traverse = require('./traverse-dom-vdom')
+  , traverse = require('./traverse-vdom-dom')
 
 var onExit = function(node, domNode) { 
   return traverse(node, domNode, function(vNode, domNode) {

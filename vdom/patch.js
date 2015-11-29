@@ -1,87 +1,65 @@
 var isArray = require("x-is-array")
+  , render = require("virtual-dom/vdom/create-element")
+  , domIndex = require("virtual-dom/vdom/dom-index")
+  , patchOp = require("./patch-op")
 
-var render = require("virtual-dom/vdom/create-element")
-var domIndex = require("virtual-dom/vdom/dom-index")
-var patchOp = require("./patch-op")
+module.exports = function defferedPatch(rootNode, patches, renderOptions) {
+  var indices = patchIndices(patches)
 
-module.exports = defferedPatch
+  if (indices.length === 0) return Promise.resolve(rootNode)
 
-var opNo = 0
+  var index = domIndex(rootNode, patches.a, indices)
+    , ownerDocument = rootNode.ownerDocument
 
-function defferedPatch(rootNode, patches, renderOptions) {
-    console.log('--------> operation no', opNo++)
+  if (!renderOptions.document && ownerDocument !== document)
+      renderOptions.document = ownerDocument
 
-    var indices = patchIndices(patches)
+  var patchIndex = []
 
-    if (indices.length === 0) { return Promise.resolve(rootNode) }
+  indices.forEach(function(d) {
+    var idx = d
+      , patch = patches[idx]
 
-    var index = domIndex(rootNode, patches.a, indices)
-    var ownerDocument = rootNode.ownerDocument
+    if (!isArray(patch)) patch = [patch]
 
-    if (!renderOptions.document && ownerDocument !== document) {
-        renderOptions.document = ownerDocument
+    patch.forEach(function(d) { patchIndex.push({idx: idx, patch: d}) }) 
+  })
+
+  var operations = patchIndex.map(function(d) {
+    return function(rootNode) {
+      return function(ok) {
+        var patch = applyPatch(index[d.idx], d.patch, renderOptions)
+        if (patch && patch.then) patch.then(function(node) { ok(rootNode) })
+        else ok(rootNode)
+      }
+    }
+  })
+  
+  return new Promise(function(ok, err) {
+    var p = Promise.resolve(rootNode)
+      , operationIndex = 0
+
+    var takeNext = function(p) {
+      p.then(function(node) {
+        if( operationIndex == operations.length ) return ok(node)
+        if (rootNode === node) rootNode = node
+
+        takeNext(new Promise(operations[operationIndex](node)))
+        operationIndex++
+      })
     }
 
-    var __p = []
+    takeNext(p)
 
-    indices.forEach(function(d) {
-      var idx = d
-        , patch = patches[idx]
-
-      if (!isArray(patch)) patch = [patch]
-      
-      patch.forEach(function(d) {
-        __p.push({idx: idx, patch: d})
-      }) 
-    })
-
-    var operations = __p.map(function(d) {
-      return function(__rootNode) {
-        return function(ok) {
-          var __c = applyPatch(index[d.idx], d.patch, renderOptions)
-          if(__c && __c.then) {
-            __c.then(function(node) {
-              ok(__rootNode)
-            })
-          }else{
-          ok(__rootNode)
-          }
-        }
-      }
-    })
-    
-    return new Promise(function(ok, err) {
-      var p = Promise.resolve(rootNode)
-        , z = 0
-
-      var takeNext = function(p) {
-        p.then(function(node) {
-          if( z == operations.length ) return ok(node)
-          if (rootNode === node) rootNode = node
-          takeNext(new Promise(operations[z](node)))
-          z++
-        })
-      }
-
-      takeNext(p)
-    }).then(function(dom) {
-      return dom
-    })
+  }).then(function(dom) { return dom })
 }
 
 function applyPatch(domNode, patchList, renderOptions) {
-  if (!domNode) return rootNode
   return patchOp(patchList, domNode, renderOptions)
 }
 
 function patchIndices(patches) {
     var indices = []
-
-    for (var key in patches) {
-        if (key !== "a") {
-            indices.push(Number(key))
-        }
-    }
-
+    for (var key in patches) (key !== "a") && indices.push(Number(key));
     return indices
 }

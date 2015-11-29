@@ -62,11 +62,8 @@ var onUpdate = function(delay) {
 
 var onExit = function(delay) {
   return function(node) {
-    //temp workaroudn
-    if(!document.contains(node)) return Promise.resolve()
     console.log('onExit', node)
     return new Promise(function(ok, err) {
-      // ok()
       Velocity(node, 
         { opacity: 0, color: '#FF0000', width: 0 }
       , { complete: ok }
@@ -89,6 +86,7 @@ var c = 0
 function run() {
   var root = h('span.root') //dont attach lifecycle to root
     , kids = []
+    , redraw
 
   for (var i = 0; i < 5;i ++) {
      var color = '#' + Math.floor(Math.random()*16777215).toString(16)

@@ -1,8 +1,5 @@
-var isArray = require("x-is-array")
-
 var VPatch = require("virtual-dom/vnode/vpatch")
-
-var updateWidget = require("virtual-dom/vdom/update-widget")
+  , updateWidget = require("virtual-dom/vdom/update-widget")
 
 module.exports = applyPatch
 
@@ -98,6 +95,16 @@ function replaceRoot(oldRoot, newRoot) {
     }
 
     return newRoot;
+}
+
+var traverse = require('./patch/traverse-vdom-dom')
+
+var removeOp = function(node, domNode) { 
+  return traverse(node, domNode, function(vNode, domNode) {
+    var props = vNode.properties 
+    if(!(domNode && props && props.onExit)) return
+    return props.onExit(domNode, props)
+  })
 }
 
 function vNodePatch(domNode, leftVNode, vNode, renderOptions) {

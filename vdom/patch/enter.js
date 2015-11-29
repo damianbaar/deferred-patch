@@ -1,5 +1,4 @@
-var isArray = require("x-is-array")
-  , traverse = require('./traverse-dom-vdom')
+var traverse = require('./traverse-vdom-dom')
 
 var onEnter = function(node, domNode) { 
   return traverse(node, domNode, function(vNode, domNode, goDeeper) {
