@@ -6,18 +6,25 @@ var updateWidget = require("virtual-dom/vdom/update-widget")
 
 module.exports = applyPatch
 
+var patches = (function() {
+  var patches = {}
+
+  patches[VPatch.REMOVE] = require('./patch/exit')
+  patches[VPatch.INSERT] = require('./patch/enter')
+  patches[VPatch.PROPS] = require('./patch/update')
+
+  return patches  
+})()
+
 function applyPatch(vpatch, domNode, renderOptions) {
     var type = vpatch.type
+
+    if (patches[type]) return patches[type](domNode, vpatch, renderOptions)
+
     var vNode = vpatch.vNode
     var patch = vpatch.patch
 
     switch (type) {
-        case VPatch.REMOVE:
-          return require('./patch/exit')(domNode, vpatch, renderOptions)
-        case VPatch.INSERT:
-          return require('./patch/enter')(domNode, vpatch, renderOptions)
-        case VPatch.PROPS:
-          return require('./patch/update')(domNode, vpatch, renderOptions)
         case VPatch.VTEXT:
           return Promise
               .all(updateOp(patch, domNode.parentNode))

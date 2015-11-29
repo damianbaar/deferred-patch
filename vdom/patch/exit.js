@@ -24,7 +24,7 @@ var run = function(vNode, domNode, method) {
   getHooks({ children: toArray(vNode) }
           ,{ children: toArray(domNode) })
 
-  return hooks.reverse()
+  return hooks
 }
 
 var onExit = function(node, domNode) { 
@@ -36,7 +36,7 @@ module.exports = function(domNode, vpatch, renderOptions) {
     , patch = vpatch.patch
 
   return Promise
-          .all(onExit(vNode, domNode))
+          .all(onExit(vNode, domNode).reverse())
           .then(function() {
             removeNode(domNode, vNode)
             return domNode
