@@ -70,6 +70,25 @@ var onExit = function(delay) {
       )
     })
   }
+}
+
+var onReorder = function(delay) {
+  return function(node, props) {
+    console.log('onReorder', node, 'from', props.from, 'to', props.to)
+
+    return new Promise(function(ok, err) {
+      var pos = node.style.position
+      node.style.position = 'absolute'
+      node.style.top = props.from * 22 + 'px'
+      Velocity(node, 
+        { top: props.to * 22 + 'px' }
+      , { complete: function() {
+          ok()
+          node.style.position = pos
+        }}
+      )
+    })
+  }
   }
 
 
@@ -78,6 +97,7 @@ var lifecycle = function(custom) {
       onEnter: onEnter(100)
     , onUpdate: onUpdate(100)
     , onExit: onExit(100)
+    , onReorder: onReorder(100)
   })
 }
 
@@ -90,11 +110,14 @@ function run() {
 
   for (var i = 0; i < 5;i ++) {
      var color = '#' + Math.floor(Math.random()*16777215).toString(16)
-     kids.push(h('div.bar', lifecycle({key:i, data: 50 + 50*(i + 2)*Math.random(), color: color}), ['Bar'+i]))
+     kids.push(h('div.bar', lifecycle({key:'fancy'+i, data: 50 + 50*(i + 2)*Math.random(), color: color}), ['Bar'+i]))
   }
 
-  if (c % 2 == 0)
-    kids.push(h('div.bar', lifecycle({data: 100 + 50*Math.random(), color: '#FF0000'}), ['Bar'+i]))
+  if (c % 2 == 0) {
+    kids.push(h('div.bar', lifecycle({key: 'fancy'+5, data: 100 + 50*Math.random(), color: '#FF0000'}), ['Bar'+i]))
+    kids = kids.reverse()
+  }
+
 
   redraw = h('button', {key:'redraw', 'onclick': function() { run(c++) }}, ['redraw'])
 

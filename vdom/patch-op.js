@@ -107,6 +107,13 @@ var removeOp = function(node, domNode) {
   })
 }
 
+var reorderOp = function(node, domNode, position) { 
+  return traverse(node, domNode, function(vNode, domNode) {
+    if(!(domNode && domNode.node && domNode.node.onReorder)) return
+    return domNode.node.onReorder(domNode.node, domNode)
+  })
+}
+
 function vNodePatch(domNode, leftVNode, vNode, renderOptions) {
     var parentNode = domNode.parentNode
 
@@ -127,15 +134,55 @@ function reorderChildren(domNode, moves, vnode) {
     var childNodes = domNode.childNodes
       , node
       , remove
+      , insert
+      , keyMap = {}
 
     var toRemove = []
+      , toReorder = []
+
+    var key = {}
+
+    var getChildIndex = function(dom, node) {
+        return [].indexOf.call(dom, node)
+    }
 
     for (var i = 0; i < moves.removes.length; i++) {
-        remove = moves.removes[i]
-        node = childNodes[remove.from]
-        if (!remove.key) toRemove.push(node)
+      remove = moves.removes[i]
+      node = childNodes[remove.from]
+      if (remove.key) {
+        keyMap[remove.key] = node
+        key[remove.key] = [i, remove.from]
+      }
+      else toRemove.push(node)
     }
-    //TO CONSIDER: hook for reordering
+var __added = []
+    var length = childNodes.length
+    for (var j = 0; j < moves.inserts.length; j++) {
+      insert = moves.inserts[j]
+      var _to = key[insert.key]
+      __added.push(childNodes[_to[0]])
+      toReorder.push({node: childNodes[_to[0]]})
+    }
+
+    var length = childNodes.length
+    for (var j = 0; j < length; j++) {
+      if(__added.indexOf(childNodes[j]) > -1) continue
+      toReorder.push({node: childNodes[j]})
+    }
+
+    toReorder = toReorder.map(function(p) {
+      p.from = getChildIndex(childNodes, p.node)
+      return p
+    })
+
+    var getToReorder = function(dom) {
+      debugger
+      return toReorder.map(function(p) {
+        p.to = getChildIndex(dom.children, p.node)
+        return p
+      })
+    }
+
     return Promise
       .all(removeOp(vnode, toRemove))
       .then(function() {
@@ -158,5 +205,11 @@ function reorderChildren(domNode, moves, vnode) {
         }
 
         return domNode
+      }).then(function(domNode) {
+        return Promise
+          .all(reorderOp(vnode.children, getToReorder(domNode)))
+          .then(function(d) {
+            return domNode 
+          })
       })
 }
