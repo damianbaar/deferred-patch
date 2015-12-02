@@ -132,53 +132,48 @@ function vNodePatch(domNode, leftVNode, vNode, renderOptions) {
 
 function reorderChildren(domNode, moves, vnode) {
     var childNodes = domNode.childNodes
-      , node
-      , remove
-      , insert
       , keyMap = {}
 
     var toRemove = []
       , toReorder = []
 
-    var key = {}
+    var getChildIndex = function(dom, node) { return [].indexOf.call(dom, node) }
 
-    var getChildIndex = function(dom, node) {
-        return [].indexOf.call(dom, node)
-    }
+    var key = {}
+      , node
+      , remove
+      , insert
 
     for (var i = 0; i < moves.removes.length; i++) {
       remove = moves.removes[i]
       node = childNodes[remove.from]
       if (remove.key) {
+        key[remove.key] = remove.from
         keyMap[remove.key] = node
-        key[remove.key] = [i, remove.from]
       }
       else toRemove.push(node)
     }
-var __added = []
+
     var length = childNodes.length
     for (var j = 0; j < moves.inserts.length; j++) {
       insert = moves.inserts[j]
-      var _to = key[insert.key]
-      __added.push(childNodes[_to[0]])
-      toReorder.push({node: childNodes[_to[0]]})
+      var to = key[insert.key]
+      toReorder.push(childNodes[to])
     }
 
-    var length = childNodes.length
     for (var j = 0; j < length; j++) {
-      if(__added.indexOf(childNodes[j]) > -1) continue
-      toReorder.push({node: childNodes[j]})
+      if(toReorder.indexOf(childNodes[j]) > -1) continue
+      toReorder.push(childNodes[j])
     }
 
     toReorder = toReorder.map(function(p) {
-      p.from = getChildIndex(childNodes, p.node)
+      p.from = getChildIndex(childNodes, p)
       return p
     })
 
     var getToReorder = function(dom) {
-      debugger
       return toReorder.map(function(p) {
-        p.to = getChildIndex(dom.children, p.node)
+        p.to = getChildIndex(dom.children, p)
         return p
       })
     }
@@ -186,22 +181,13 @@ var __added = []
     return Promise
       .all(removeOp(vnode, toRemove))
       .then(function() {
-        var keyMap = {}
-        var insert
-        for (var i = 0; i < moves.removes.length; i++) {
-            remove = moves.removes[i]
-            node = childNodes[remove.from]
-            if (remove.key) {
-                keyMap[remove.key] = node
-            }
-            domNode.removeChild(node)
-        }
+        toRemove.forEach(function(node) { domNode.removeChild(node) })
 
-        var length = childNodes.length
+        var next = childNodes.length
         for (var j = 0; j < moves.inserts.length; j++) {
             insert = moves.inserts[j]
             node = keyMap[insert.key]
-            domNode.insertBefore(node, insert.to >= length++ ? null : childNodes[insert.to])
+            domNode.insertBefore(node, insert.to >= next++ ? null : childNodes[insert.to])
         }
 
         return domNode
