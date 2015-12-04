@@ -15,6 +15,7 @@
   "author": "Damian Baar <damian.baar@gmail.com> (http://github.com/damianbaar)",
   "license": "MIT",
   "dependencies": {
+    "lodash": "^3.10.1",
     "virtual-dom": "^2.1.1",
     "x-is-array": "^0.1.0"
   },

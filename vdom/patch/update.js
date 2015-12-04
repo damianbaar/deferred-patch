@@ -1,9 +1,19 @@
 var applyProperties = require("virtual-dom/vdom/apply-properties")
   , traverse = require('./traverse-vdom-dom')
 
+var getChildIndex = function(dom, node) {
+    return [].indexOf.call(dom, node)
+}
+
 var onUpdate = function(node, domNode, props) { 
   return traverse(node, domNode, function(vNode, domNode) {
-    if(domNode && domNode.onUpdate) return domNode.onUpdate(domNode, props)
+    if(domNode && domNode.onUpdate) {
+      if(domNode.to) {
+        debugger
+      }
+      props.to = getChildIndex(domNode.parentNode.children, domNode)
+      return domNode.onUpdate(domNode, props)
+    }
   })
 }
 

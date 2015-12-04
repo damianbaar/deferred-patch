@@ -12,8 +12,23 @@ var patches = (function() {
   
   return patches  
 })()
+var onUpdate = function(node, domNode, props) { 
+  return traverse(node, domNode, function(vNode, domNode) {
+    if(domNode && domNode.onUpdate) return domNode.onUpdate(domNode, props)
+  })
+}
+var t = ["NONE"
+,"VTEXT" 
+,"VNODE"
+,"WIDGET" 
+,"PROPS" 
+,"ORDER"
+,"INSERT" 
+,"REMOVE" 
+,"THUNK"]
 
 function applyPatch(vpatch, domNode, renderOptions) {
+  console.log(t[vpatch.type], vpatch.type, vpatch)
     var type = vpatch.type
 
     if (patches[type]) return patches[type](domNode, vpatch, renderOptions)
@@ -23,11 +38,11 @@ function applyPatch(vpatch, domNode, renderOptions) {
 
     switch (type) {
         case VPatch.VTEXT:
-          return Promise
-              .all(updateOp(patch, domNode.parentNode))
-              .then(function() {
+          // return Promise//.resolve()
+          //     .all(onUpdate(patch, domNode.parentNode))
+          //     .then(function() {
                 return stringPatch(domNode, vNode, patch, renderOptions)
-              })
+              // })
         case VPatch.WIDGET:
             return widgetPatch(domNode, vNode, patch, renderOptions)
         case VPatch.VNODE:
@@ -101,9 +116,8 @@ var traverse = require('./patch/traverse-vdom-dom')
 
 var removeOp = function(node, domNode) { 
   return traverse(node, domNode, function(vNode, domNode) {
-    var props = vNode.properties 
-    if(!(domNode && props && props.onExit)) return
-    return props.onExit(domNode, props)
+    if(!(domNode && domNode.onExit)) return
+    return domNode.onExit(domNode, domNode)
   })
 }
 
@@ -132,48 +146,59 @@ function vNodePatch(domNode, leftVNode, vNode, renderOptions) {
 
 function reorderChildren(domNode, moves, vnode) {
     var childNodes = domNode.childNodes
+      , node
+      , remove
+      , insert
       , keyMap = {}
 
     var toRemove = []
       , toReorder = []
 
-    var getChildIndex = function(dom, node) { return [].indexOf.call(dom, node) }
-
     var key = {}
-      , node
-      , remove
-      , insert
 
+    var addToReorder = function(node) { if(toReorder.indexOf(node) == -1) toReorder.push(node) }
+      , getChildIndex = function(dom, node) { return [].indexOf.call(dom, node) }
+      , assign = function(domChilds, nodes, cb) {
+      return nodes.map(function(p) {
+        return cb(p, getChildIndex(domChilds, p)) || p
+      })
+    }
+
+    var getChildIndex = function(dom, node) {
+        return [].indexOf.call(dom, node)
+    }
     for (var i = 0; i < moves.removes.length; i++) {
       remove = moves.removes[i]
       node = childNodes[remove.from]
       if (remove.key) {
-        key[remove.key] = remove.from
         keyMap[remove.key] = node
+        key[remove.key] = i
       }
       else toRemove.push(node)
     }
-
+    var __added = []
     var length = childNodes.length
     for (var j = 0; j < moves.inserts.length; j++) {
       insert = moves.inserts[j]
-      var to = key[insert.key]
-      toReorder.push(childNodes[to])
+      var _to = key[insert.key]
+      __added.push(childNodes[_to])
+      toReorder.push({node: childNodes[_to]})
     }
 
+    var length = childNodes.length
     for (var j = 0; j < length; j++) {
-      if(toReorder.indexOf(childNodes[j]) > -1) continue
-      toReorder.push(childNodes[j])
+      if(__added.indexOf(childNodes[j]) > -1) continue
+      toReorder.push({node: childNodes[j]})
     }
 
     toReorder = toReorder.map(function(p) {
-      p.from = getChildIndex(childNodes, p)
+      p.from = getChildIndex(childNodes, p.node)
       return p
     })
 
     var getToReorder = function(dom) {
       return toReorder.map(function(p) {
-        p.to = getChildIndex(dom.children, p)
+        p.to = getChildIndex(dom.children, p.node)
         return p
       })
     }
@@ -181,7 +206,16 @@ function reorderChildren(domNode, moves, vnode) {
     return Promise
       .all(removeOp(vnode, toRemove))
       .then(function() {
-        toRemove.forEach(function(node) { domNode.removeChild(node) })
+        var keyMap = {}
+        var insert
+        for (var i = 0; i < moves.removes.length; i++) {
+            remove = moves.removes[i]
+            node = childNodes[remove.from]
+            if (remove.key) {
+                keyMap[remove.key] = node
+            }
+            domNode.removeChild(node)
+        }
 
         var next = childNodes.length
         for (var j = 0; j < moves.inserts.length; j++) {

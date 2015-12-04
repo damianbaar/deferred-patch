@@ -1,10 +1,19 @@
 var traverse = require('./traverse-vdom-dom')
 
+var getChildIndex = function(dom, node) {
+    return [].indexOf.call(dom, node)
+}
+
 var onEnter = function(node, domNode) { 
   return traverse(node, domNode, function(vNode, domNode, goDeeper) {
     var props = vNode.properties 
-    goDeeper(vNode, domNode)
+   requestAnimationFrame(function() {
+    if(domNode && domNode.parentNode) {
+      props.to = getChildIndex(domNode.parentNode.children, domNode)
+    }
     if(props && props.onEnter) return props.onEnter(domNode, props)
+  })
+    goDeeper(vNode, domNode)
   })
 }
 
