@@ -124,14 +124,14 @@ function run() {
     , kids = []
     , redraw
 
-  for (var i = 0; i < 4;i ++) {
+  for (var i = 0; i < 3;i ++) {
      var color = '#' + Math.floor(Math.random()*16777215).toString(16)
      kids.push(h('div.bar', lifecycle({key:'fancy'+i, data: 50 + 50*(i + 2)*Math.random(), color: color}), ['Bar'+i]))
   }
 
   if (c % 2 == 0) {
     kids.splice(1,1)
-    kids = kids.reverse()
+    // kids = kids.reverse()
   }
 
 

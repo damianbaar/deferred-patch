@@ -167,6 +167,7 @@ function reorderChildren(domNode, moves, vnode) {
     var getChildIndex = function(dom, node) {
         return [].indexOf.call(dom, node)
     }
+    var occupated = []
     for (var i = 0; i < moves.removes.length; i++) {
       remove = moves.removes[i]
       node = childNodes[remove.from]
@@ -174,7 +175,10 @@ function reorderChildren(domNode, moves, vnode) {
         keyMap[remove.key] = node
         key[remove.key] = i
       }
-      else toRemove.push(node)
+      else if(occupated.indexOf(remove.from) == -1) {
+        toRemove.push(node)
+      }
+      occupated.push(remove.from)
     }
     var __added = []
     var length = childNodes.length
