@@ -116,6 +116,7 @@ var traverse = require('./patch/traverse-vdom-dom')
 
 var removeOp = function(node, domNode) { 
   return traverse(node, domNode, function(vNode, domNode) {
+    console.log(domNode.node, domNode.onExit)
     if(!(domNode && domNode.onExit)) return
     return domNode.onExit(domNode, domNode)
   })
@@ -123,6 +124,8 @@ var removeOp = function(node, domNode) {
 
 var reorderOp = function(node, domNode, position) { 
   return traverse(node, domNode, function(vNode, domNode) {
+    // console.log(domNode.node, domNode.onReorder)
+    // if(domNode.onReorder) return domNode.onReorder(domNode, domNode)
     if(!(domNode && domNode.node && domNode.node.onReorder)) return
     return domNode.node.onReorder(domNode.node, domNode)
   })
@@ -151,93 +154,87 @@ function reorderChildren(domNode, moves, vnode) {
       , insert
       , keyMap = {}
 
-    var toRemove = []
-      , toReorder = []
+    for(var i = 0; i < childNodes.length; i++) { 
+      childNodes[i].setAttribute('__from__', i)
+      childNodes[i].setAttribute('__to__', -1)
+      childNodes[i].setAttribute('__id__', i)
+    }
+    
+    var getChildIndex = function(dom, node) { return [].indexOf.call(dom, node) }
+    var _domNode = domNode.cloneNode(true)
+    childNodes = _domNode.childNodes
+    
+    var removed = []
+      , inserted = []
 
-    var key = {}
-
-    var addToReorder = function(node) { if(toReorder.indexOf(node) == -1) toReorder.push(node) }
-      , getChildIndex = function(dom, node) { return [].indexOf.call(dom, node) }
-      , assign = function(domChilds, nodes, cb) {
-      return nodes.map(function(p) {
-        return cb(p, getChildIndex(domChilds, p)) || p
-      })
+    for(var i = 0; i < childNodes.length; i++) { 
+      var c = childNodes[i]
+      c.from = c.getAttribute('__from__')
+      c.to = c.getAttribute('__to__')
+      c.id = c.getAttribute('__id__')
     }
 
-    var getChildIndex = function(dom, node) {
-        return [].indexOf.call(dom, node)
-    }
-    var occupated = []
     for (var i = 0; i < moves.removes.length; i++) {
       remove = moves.removes[i]
       node = childNodes[remove.from]
-      occupated.push(remove.from)
-      if (remove.key) {
-        keyMap[remove.key] = node
-        key[remove.key] = i
-      }
-      else if(occupated.indexOf(remove.from) == -1) {
-        toRemove.push(node)
-      }
+      if (remove.key) keyMap[remove.key] = node
+      _domNode.removeChild(node)
+      removed.push(node)
     }
-    var __added = []
-    var length = childNodes.length
+
+    var next = childNodes.length
     for (var j = 0; j < moves.inserts.length; j++) {
       insert = moves.inserts[j]
-      var _to = key[insert.key]
-      __added.push(childNodes[_to])
-      toReorder.push({node: childNodes[_to]})
+      node = keyMap[insert.key]
+      _domNode.insertBefore(node, insert.to >= next++ ? null : childNodes[insert.to])
+      node.to = getChildIndex(childNodes, node)
+      inserted.push(node)
     }
 
-    var length = childNodes.length
-    for (var j = 0; j < length; j++) {
-      if(__added.indexOf(childNodes[j]) > -1) continue
-      toReorder.push({node: childNodes[j]})
+    removed = removed.filter(function(d) { return inserted.indexOf(d) == -1 })
+      
+    childNodes = domNode.childNodes
+    var getReal = function(id) {
+      for(var i = 0; i < childNodes.length; i++) {
+        var o = childNodes[i]
+        if(o.getAttribute('__id__') == id) return o
+      }
     }
 
-    toReorder = toReorder.map(function(p) {
-      p.from = getChildIndex(childNodes, p.node)
-      return p
-    })
+    removed = removed.map(function(d) { return getReal(d.id) })
+    inserted = inserted.map(function(d) { return getReal(d.id) })
 
-    var getToReorder = function(dom) {
-      return toReorder.map(function(p) {
-        p.to = getChildIndex(dom.children, p.node)
-        return p
-      })
+    var rest = []
+    for(var i = 0; i < childNodes.length; i++) {
+      var c = childNodes[i]
+      if (removed.indexOf(c) == -1 && inserted.indexOf(c) == -1) {
+        rest.push(c)
+      }
     }
+
+    inserted = inserted.concat(rest)
+
+
+    debugger
 
     return Promise
-      .all(removeOp(vnode, toRemove))
+      .all(removeOp(removed, removed).concat(reorderOp(vnode, inserted)))
       .then(function() {
-        var keyMap = {}
-        var insert
-        var clone = domNode.cloneNode(true)
-        clone.__clone = 'yay!'
-        childNodes = clone.children
+        var childNodes = domNode.childNodes
+          , keyMap = {}
         for (var i = 0; i < moves.removes.length; i++) {
             remove = moves.removes[i]
             node = childNodes[remove.from]
-            if (remove.key) {
-                keyMap[remove.key] = node
-            }
-            clone.removeChild(node)
+            if (remove.key) keyMap[remove.key] = node
+            domNode.removeChild(node)
         }
 
         var next = childNodes.length
         for (var j = 0; j < moves.inserts.length; j++) {
             insert = moves.inserts[j]
             node = keyMap[insert.key]
-            clone.insertBefore(node, insert.to >= next++ ? null : childNodes[insert.to])
+            domNode.insertBefore(node, insert.to >= next++ ? null : childNodes[insert.to])
         }
-
-        return clone
-      }).then(function(domNode) {
-        return Promise
-          .all(reorderOp(vnode.children, getToReorder(domNode).filter(function(d) { return d.to != -1 })))
-          .then(function(d) {
-            console.log('###', domNode.__clone)
-            return domNode 
-          })
+        return domNode
       })
 }

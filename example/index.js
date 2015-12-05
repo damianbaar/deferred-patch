@@ -52,17 +52,13 @@ var onEnter = function(delay) {
 var onUpdate = function(delay) {
   return function(node, props) {
     console.log('onUpdate', node.from, node.to)
-    if(node.to == -1) {
-      debugger
-      node.to = '10'
-    }
     return new Promise(function(ok, err) {
+      ok()
       Velocity(node, 
         { backgroundColor: props.new.color, width: props.new.data 
         , translateY: node.to * 22 + 'px'
         , opacity: 1
         }
-      , { complete: function() { ok() } }
       )
     })
   }
@@ -74,7 +70,7 @@ var onExit = function(delay) {
     return new Promise(function(ok, err) {
       Velocity(node, 
         { opacity: 0, color: '#FF0000', width: 0 }
-      , { complete: ok }
+      , { duration: 100, complete: ok }
       )
     })
   }
@@ -82,13 +78,14 @@ var onExit = function(delay) {
 
 var onReorder = function(delay) {
   return function(node, props) {
-    console.log('onReorder', node, 'from', props.from, 'to', props.to)
+    console.log('onReorder', 'from', props.from, 'to', props.to)
 
-    if(props.to == -1) {
-      props.to = 10
-      // debugger
-      // rootNode.appendChild(node)
-    }
+    // if(props.to == -1) {
+    //   props.to = 10
+    //   // debugger
+    //   // rootNode.appendChild(node)
+    // }
+    ok()
     return new Promise(function(ok, err) {
       Velocity(node, 
         { translateY: props.to * 22 + 'px' }
@@ -116,7 +113,7 @@ function run() {
     , kids = []
     , redraw
 
-  for (var i = 0; i < 5;i ++) {
+  for (var i = 0; i < 8;i ++) {
      var color = '#' + Math.floor(Math.random()*16777215).toString(16)
      kids.push(h('div.bar', lifecycle({key:'fancy'+i, data: 50 + 50*(i + 2)*Math.random(), color: color}), ['Bar'+i]))
   }
