@@ -10,6 +10,7 @@ var onEnter = function(node, domNode) {
    requestAnimationFrame(function() {
     if(domNode && domNode.parentNode) {
       props.to = getChildIndex(domNode.parentNode.children, domNode)
+      domNode.from = props.to //TOOD eh ...
     }
     if(props && props.onEnter) return props.onEnter(domNode, props)
   })

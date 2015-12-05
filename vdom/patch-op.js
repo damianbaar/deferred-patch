@@ -171,6 +171,7 @@ function reorderChildren(domNode, moves, vnode) {
     for (var i = 0; i < moves.removes.length; i++) {
       remove = moves.removes[i]
       node = childNodes[remove.from]
+      occupated.push(remove.from)
       if (remove.key) {
         keyMap[remove.key] = node
         key[remove.key] = i
@@ -178,7 +179,6 @@ function reorderChildren(domNode, moves, vnode) {
       else if(occupated.indexOf(remove.from) == -1) {
         toRemove.push(node)
       }
-      occupated.push(remove.from)
     }
     var __added = []
     var length = childNodes.length
@@ -212,27 +212,31 @@ function reorderChildren(domNode, moves, vnode) {
       .then(function() {
         var keyMap = {}
         var insert
+        var clone = domNode.cloneNode(true)
+        clone.__clone = 'yay!'
+        childNodes = clone.children
         for (var i = 0; i < moves.removes.length; i++) {
             remove = moves.removes[i]
             node = childNodes[remove.from]
             if (remove.key) {
                 keyMap[remove.key] = node
             }
-            domNode.removeChild(node)
+            clone.removeChild(node)
         }
 
         var next = childNodes.length
         for (var j = 0; j < moves.inserts.length; j++) {
             insert = moves.inserts[j]
             node = keyMap[insert.key]
-            domNode.insertBefore(node, insert.to >= next++ ? null : childNodes[insert.to])
+            clone.insertBefore(node, insert.to >= next++ ? null : childNodes[insert.to])
         }
 
-        return domNode
+        return clone
       }).then(function(domNode) {
         return Promise
-          .all(reorderOp(vnode.children, getToReorder(domNode)))
+          .all(reorderOp(vnode.children, getToReorder(domNode).filter(function(d) { return d.to != -1 })))
           .then(function(d) {
+            console.log('###', domNode.__clone)
             return domNode 
           })
       })

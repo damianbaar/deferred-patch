@@ -8,32 +8,20 @@ var getChildIndex = function(dom, node) {
 var onUpdate = function(node, domNode, props) { 
   return traverse(node, domNode, function(vNode, domNode) {
     if(domNode && domNode.onUpdate) {
-      if(domNode.to) {
-        debugger
-      }
-      props.to = getChildIndex(domNode.parentNode.children, domNode)
+      domNode.to = props.to = getChildIndex(domNode.parentNode.children, domNode)
       return domNode.onUpdate(domNode, props)
     }
   })
 }
 
-var removeLifecycle = function(obj) {
-  ['onEnter', 'onUpdate', 'onExit', 'key']
-    .forEach(function(d) { delete obj[d] })
-
-  return obj
-}
-
 var combineState = function(_new, _old) {
-  return { new: removeLifecycle(_new)
-         , old: removeLifecycle(_old)}
+  return { new: _new, old: _old}
 }
 
 module.exports = function(domNode, vpatch) {
   var vNode = vpatch.vNode
   var patch = vpatch.patch
 
-  patch = removeLifecycle(patch)
   if (!Object.keys(patch).length) return Promise.resolve(domNode)
   var states = combineState(patch, vNode.properties)
 
