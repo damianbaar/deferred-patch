@@ -3,6 +3,8 @@
 Proof of concept or playground rather than lib (yet). Goal is to make `virtual-dom` patching fully asynchronous to be able to create more rich user expirience enhanced by animations. 
 `deffered-patch` does not include any logic for rendering queues, basically if you would like to revalidate/make a new patch you have to be sure that previous rendering phase ended. For now it is intentional to delegate such logic in some other place 
 
+[Example](http://damianbaar.github.io/deferred-patch/)
+
 ```js
 var h = require('virtual-dom/h')
   , diff = require('virtual-dom/diff')
