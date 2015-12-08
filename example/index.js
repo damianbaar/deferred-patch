@@ -35,10 +35,9 @@ var Velocity = require('velocity-animate')
 
 var onEnter = function(delay) {
   return function(node, props) {
-    // console.log('onEnter', props)
     node.style.position = 'absolute'
+    node.style.opacity = 0
     return new Promise(function(ok, err) {
-      node.style.opacity = 0
       Velocity(node, 
         { opacity: 1, backgroundColor: props.color, width: props.data 
         , translateY: props.to * 22 + 'px'
@@ -66,7 +65,6 @@ var onUpdate = function(delay) {
 
 var onExit = function(delay) {
   return function(node) {
-    // console.log('onExit', node)
     return new Promise(function(ok, err) {
       Velocity(node, 
         { opacity: 0, color: '#FF0000', width: 0 }
@@ -80,11 +78,6 @@ var onReorder = function(delay) {
   return function(node, props) {
     console.log('onReorder', 'from', props.from, 'to', props.to)
 
-    // if(props.to == -1) {
-    //   props.to = 10
-    //   // debugger
-    //   // rootNode.appendChild(node)
-    // }
     ok()
     return new Promise(function(ok, err) {
       Velocity(node, 
@@ -107,11 +100,13 @@ var lifecycle = function(custom) {
 }
 
 var c = 0
+  , flip = false
 
-function run() {
+function run(counter, flip) {
   var root = h('span.root') //dont attach lifecycle to root
     , kids = []
     , redraw
+    , flipOp
 
   for (var i = 0; i < 8;i ++) {
      var color = '#' + Math.floor(Math.random()*16777215).toString(16)
@@ -121,14 +116,25 @@ function run() {
   if (c % 2 == 0) {
     kids.splice(1,1)
     kids.splice(3,1)
-    kids = kids.reverse()
   }
 
+  if(flip)
+    kids = kids.reverse()
 
   redraw = h('button', {key:'redraw', 'onclick': function() { run(c++) }}, ['redraw'])
+  flipOp = h('input', {key:'flip', type: 'checkbox', 'onclick': function() { run(c++, true) }}, ['redraw'])
 
-  root.children = [h('div.container', kids), redraw]
+  root.children = [h('div.container', kids), redraw, flipOp]
+
+  var select = require('vtree-select')
+
   update(root)
 }
 
-run(c++)
+run(c++, false)
+
+//vtree-create
+//works on array
+//insert, append, text (VText), css, style
+//consider: animation
+//

@@ -29,9 +29,11 @@
     "example-dev": "watchify example/index.js -o example/bundle.js -d"
   },
   "devDependencies": {
+    "cssauron": "^1.2.0",
     "npm-watch": "0.0.1",
     "sinon": "^1.17.2",
     "tape": "^4.2.2",
-    "velocity-animate": "^1.2.3"
+    "velocity-animate": "^1.2.3",
+    "vtree-select": "^2.0.0"
   }
 }
