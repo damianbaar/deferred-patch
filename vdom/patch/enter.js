@@ -6,14 +6,14 @@ var getChildIndex = function(dom, node) {
 
 var onEnter = function(node, domNode) { 
   return traverse(node, domNode, function(vNode, domNode, goDeeper) {
-    var props = vNode.properties 
-   requestAnimationFrame(function() {
-    if(domNode && domNode.parentNode) {
-      props.to = getChildIndex(domNode.parentNode.children, domNode)
-      domNode.from = props.to //TOOD eh ...
-    }
-    if(props && props.onEnter) return props.onEnter(domNode, props)
-  })
+    var props = vNode.properties || domNode
+     requestAnimationFrame(function() {
+      if(domNode && domNode.parentNode) {
+        props.to = getChildIndex(domNode.parentNode.children, domNode)
+        domNode.from = props.to //TOOD eh ...
+      }
+      if(props && props.onEnter) return props.onEnter(domNode, props)
+    })
     goDeeper(vNode, domNode)
   })
 }
@@ -26,6 +26,6 @@ module.exports = function insertNode(domNode, vpatch, renderOptions) {
   if (domNode) domNode.appendChild(newNode)
 
   return Promise
-    .all(onEnter(patch, newNode))
+    .all(onEnter(patch.vnode || patch, newNode))
     .then(function() { return domNode })
 }
