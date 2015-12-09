@@ -4,6 +4,7 @@ var h = require('virtual-dom/h')
   , createElement = require('virtual-dom/create-element')
 
 var defferedPatch = require('../index')
+  , cElement = require('../vdom/createElement')
 
 var patches
   , tree = h('span')
@@ -20,7 +21,7 @@ var update = function(newtree) {
 
     busy = true
 
-    var a = patch(rootNode, patches, { patch: defferedPatch })
+    var a = patch(rootNode, patches, { patch: defferedPatch, render: cElement })
 
     a.then(function(d) {
       console.log('### render', d)
@@ -38,11 +39,12 @@ var onEnter = function(delay) {
     node.style.position = 'absolute'
     node.style.opacity = 0
     return new Promise(function(ok, err) {
+      ok()
       Velocity(node, 
         { opacity: 1, backgroundColor: props.color, width: props.data 
         , translateY: props.to * 22 + 'px'
         }
-      , { complete: ok }
+      // , { complete: ok }
       )
     })
   }
@@ -68,7 +70,7 @@ var onExit = function(delay) {
     return new Promise(function(ok, err) {
       Velocity(node, 
         { opacity: 0, color: '#FF0000', width: 0 }
-      , { duration: 400, complete: ok }
+      , { duration: 100, complete: ok }
       )
     })
   }
@@ -111,10 +113,10 @@ function run(counter, flip) {
      kids.push(h('div.bar', lifecycle({key:'fancy'+i, data: 50 + 50*(i + 2)*Math.random(), color: color}), ['Bar'+i]))
   }
 
-  if (c % 2 == 0) {
-    kids.splice(1,1)
-    kids.splice(3,1)
-  }
+  // if (c % 2 == 0) {
+  //   kids.splice(1,1)
+  //   kids.splice(3,1)
+  // }
 
   if(flip)
     kids = kids.reverse()
@@ -125,6 +127,7 @@ function run(counter, flip) {
   var ConstantlyThunk = function(greeting){
     this.greeting = greeting
     this.type = 'Thunk'
+    this.deffered = true
   }
 
   ConstantlyThunk.prototype.render = function(previous) {
@@ -134,16 +137,20 @@ function run(counter, flip) {
        _c.push(h('div.bar', lifecycle({key:'fancy#'+i, data: 50 + 50*(i + 2)*Math.random(), color: color}), ['Bar'+i]))
     }
 
-    // if (previous && previous.vnode) {
-    //   return previous.vnode
-    // } else {
-      return h('div', lifecycle(), _c)
-    // }
+    return h('div', lifecycle(), _c)
   }
 
   Thunk1 = new ConstantlyThunk("Thunk!" + c)
 
-  root.children = [h('div.container', kids), redraw, flipOp]
+  var deffered = function(delay) {
+    return new Promise(function(ok) {
+      setTimeout(function() {
+      ok(h('div', lifecycle(), ['OLE!'+c+'#'+delay]))
+      }, delay)
+    })
+  }
+
+  root.children = [h('div.container', kids), redraw, flipOp, deffered(300), deffered(1000)]
 
   // if(c %2 ==0) {
     root.children.push(Thunk1)

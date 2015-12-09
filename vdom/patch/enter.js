@@ -22,6 +22,27 @@ module.exports = function insertNode(domNode, vpatch, renderOptions) {
   var patch = vpatch.patch
     //CONSIDER: filter out enter/exit and rest of the properties here
     , newNode = renderOptions.render(patch, renderOptions)
+  
+  if (newNode && newNode.then) {
+    return newNode
+    .then(function(node) {
+      if (domNode) {
+        domNode.appendChild(node)
+        newNode = node
+      }
+      return node
+    })
+    .then(function(dom) {
+      return Promise
+        .all(onEnter(patch.vnode || patch, newNode))
+        .then(function() { 
+          return domNode 
+        })
+    })
+    .then(function() {
+      return domNode
+    })
+  }
 
   if (domNode) domNode.appendChild(newNode)
 
