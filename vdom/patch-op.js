@@ -72,6 +72,14 @@ function stringPatch(domNode, leftVNode, vText, renderOptions) {
   } else {
     var parentNode = domNode.parentNode
     newNode = renderOptions.render(vText, renderOptions)
+    
+    if(newNode && newNode.then) {
+      return newNode.then(function(node) {
+        if (parentNode && node !== domNode) {
+          parentNode.replaceChild(node, domNode)
+        }
+      })
+    }
 
     if (parentNode && newNode !== domNode) {
       parentNode.replaceChild(newNode, domNode)

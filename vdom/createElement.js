@@ -3,8 +3,9 @@ var _createElement = require('virtual-dom/vdom/create-element')
 
 //TODO instead of wrapping from virtual-dom, wrap from renderOptions!
 module.exports = function createElement(vnode, opts) {
-  if (vnode && vnode.then) {
-    return vnode.then(function(node) {
+  if (vnode && vnode.type2 == 'custom') {
+    return new Promise(vnode.render)
+    .then(function(node) {
       return _createElement(node, opts)
     })
   }

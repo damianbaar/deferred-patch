@@ -143,17 +143,28 @@ function run(counter, flip) {
   Thunk1 = new ConstantlyThunk("Thunk!" + c)
 
   var deffered = function(delay) {
-    return new Promise(function(ok) {
-      setTimeout(function() {
-      ok(h('div', lifecycle(), ['OLE!'+c+'#'+delay]))
-      }, delay)
-    })
+    var a
+    return { 
+      type: 'VirtualNode'
+    , version: '2'
+    , type2: 'custom'
+    , children: []
+  , properties: {test: Math.random()}
+    , text: Math.random(),
+      render: function(ok) {
+        setTimeout(function() {
+          console.log('####', delay, c)
+          ok(h('div', lifecycle(), ['OLE!'+c+'#'+delay]))
+        }, delay)
+      }
+    }
   }
 
-  root.children = [h('div.container', kids), redraw, flipOp, deffered(300), deffered(1000)]
+  // root.children = [h('div.container', kids), redraw, flipOp, deffered(300), deffered(1000)]
+  root.children = [redraw, deffered(300), deffered(1000)]
 
   // if(c %2 ==0) {
-    root.children.push(Thunk1)
+    // root.children.push(Thunk1)
   // }
 
   // var select = require('vtree-select')
