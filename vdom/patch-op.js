@@ -93,10 +93,21 @@ function widgetPatch(domNode, leftVNode, widget, renderOptions) {
   var updating = updateWidget(leftVNode, widget)
   var newNode
 
-  if (updating) {
+  if (updating && widget.update) {
     newNode = widget.update(leftVNode, domNode) || domNode
   } else {
     newNode = renderOptions.render(widget, renderOptions)
+  }
+
+  if(newNode && newNode.then) {
+    return newNode.then(function(d) {
+      var patches = renderOptions.diff(d._node, leftVNode._node || domNode._node)
+      return renderOptions
+        .patch(domNode, patches, renderOptions)
+        .then(function(d) {
+          return d
+        })
+    })
   }
 
   var parentNode = domNode.parentNode
@@ -130,7 +141,6 @@ var traverse = require('./patch/traverse-vdom-dom')
 
 var removeOp = function(node, domNode) { 
   return traverse(node, domNode, function(vNode, domNode) {
-    console.log(domNode.node, domNode.onExit)
     if(!(domNode && domNode.onExit)) return
     return domNode.onExit(domNode, domNode)
   })
@@ -192,8 +202,10 @@ function reorderChildren(domNode, moves, vnode) {
   for (var i = 0; i < moves.removes.length; i++) {
     remove = moves.removes[i]
     node = childNodes[remove.from]
-    if (remove.key) keyMap[remove.key] = node
-      _domNode.removeChild(node)
+    if (remove.key) {
+      keyMap[remove.key] = node
+      // _domNode.removeChild(node)
+    }
     removed.push(node)
   }
 
@@ -202,7 +214,7 @@ function reorderChildren(domNode, moves, vnode) {
     insert = moves.inserts[j]
     node = keyMap[insert.key]
     _domNode.insertBefore(node, insert.to >= next++ ? null : childNodes[insert.to])
-    node.to = getChildIndex(childNodes, node)
+    node.to = getChildIndex(childNodes, node) || node.from
     inserted.push(node)
   }
 

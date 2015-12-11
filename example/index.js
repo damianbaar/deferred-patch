@@ -21,7 +21,7 @@ var update = function(newtree) {
 
     busy = true
 
-    var a = patch(rootNode, patches, { patch: defferedPatch, render: cElement })
+    var a = patch(rootNode, patches, { diff: diff, patch: defferedPatch, render: cElement })
 
     a.then(function(d) {
       console.log('### render', d)
@@ -36,16 +36,16 @@ var Velocity = require('velocity-animate')
 
 var onEnter = function(delay) {
   return function(node, props) {
-    node.style.position = 'absolute'
-    node.style.opacity = 0
+    // node.style.position = 'absolute'
+    // node.style.opacity = 0
     return new Promise(function(ok, err) {
       ok()
-      Velocity(node, 
-        { opacity: 1, backgroundColor: props.color, width: props.data 
-        , translateY: props.to * 22 + 'px'
-        }
-      // , { complete: ok }
-      )
+      // Velocity(node, 
+      //   { opacity: 1, backgroundColor: props.color, width: props.data 
+      //   , translateY: props.to * 22 + 'px'
+      //   }
+      // // , { complete: ok }
+      // )
     })
   }
 }
@@ -53,6 +53,8 @@ var onEnter = function(delay) {
 var onUpdate = function(delay) {
   return function(node, props) {
     console.log('onUpdate', node.from, node.to)
+    node.style.position = 'absolute'
+    // node.style.opacity = 0
     return new Promise(function(ok, err) {
       ok()
       Velocity(node, 
@@ -67,18 +69,21 @@ var onUpdate = function(delay) {
 
 var onExit = function(delay) {
   return function(node) {
+    console.log('onExit')
     return new Promise(function(ok, err) {
-      Velocity(node, 
-        { opacity: 0, color: '#FF0000', width: 0 }
-      , { duration: 100, complete: ok }
-      )
+      ok()
+      // Velocity(node, 
+      //   { opacity: 0, color: '#FF0000', width: 0 }
+      // , { duration: 100, complete: ok }
+      // )
     })
   }
 }
 
 var onReorder = function(delay) {
   return function(node, props) {
-    ok()
+    console.log('onreorder')
+    node.style.position = 'absolute'
     return new Promise(function(ok, err) {
       Velocity(node, 
         { translateY: props.to * 22 + 'px' }
@@ -121,13 +126,12 @@ function run(counter, flip) {
   if(flip)
     kids = kids.reverse()
 
-  redraw = h('button', {key:'redraw', 'onclick': function() { run(c++) }}, ['redraw'])
+  redraw = h('button', {key:'redraw', 'onclick': function() { run(c++, !flip) }}, ['redraw'])
   flipOp = h('input', {key:'flip', type: 'checkbox', 'onclick': function() { run(c++, true) }}, ['redraw'])
   
   var ConstantlyThunk = function(greeting){
     this.greeting = greeting
     this.type = 'Thunk'
-    this.deffered = true
   }
 
   ConstantlyThunk.prototype.render = function(previous) {
@@ -144,24 +148,34 @@ function run(counter, flip) {
 
   var deffered = function(delay) {
     var a
+      , loaded = false
     return { 
-      type: 'VirtualNode'
-    , version: '2'
-    , type2: 'custom'
-    , children: []
-  , properties: {test: Math.random()}
-    , text: Math.random(),
-      render: function(ok) {
-        setTimeout(function() {
+      type: 'Widget'
+    , deffered: true
+    , render: function(ok) {
+        var markup = function() {
           console.log('####', delay, c)
-          ok(h('div', lifecycle(), ['OLE!'+c+'#'+delay]))
-        }, delay)
+          var _c = []
+          for (var i = 0; i < 8;i ++) {
+             var color = '#' + Math.floor(Math.random()*16777215).toString(16)
+             _c.push(h('div.bar', lifecycle({key:'fancy#'+i, data: 50 + 50*(i + 2)*Math.random(), color: color}), ['Bar'+i]))
+          }
+
+          if(flip)
+            _c.reverse()
+
+          // loaded = true
+
+          return ok(h('div', lifecycle(), _c))
+        }
+        
+        return !loaded ? setTimeout(markup, delay) : markup()
       }
     }
   }
 
   // root.children = [h('div.container', kids), redraw, flipOp, deffered(300), deffered(1000)]
-  root.children = [redraw, deffered(300), deffered(1000)]
+  root.children = [redraw, deffered(100), Thunk1]//deffered(1000)]
 
   // if(c %2 ==0) {
     // root.children.push(Thunk1)

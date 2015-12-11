@@ -21,11 +21,15 @@ var onEnter = function(node, domNode) {
 module.exports = function insertNode(domNode, vpatch, renderOptions) {
   var patch = vpatch.patch
     //CONSIDER: filter out enter/exit and rest of the properties here
-    , newNode = renderOptions.render(patch, renderOptions)
+  //
+
+  patch = typeof patch == 'function' ? new Promise(patch) : patch
+  var newNode = renderOptions.render(patch, renderOptions)
   
   if (newNode && newNode.then) {
     return newNode
     .then(function(node) {
+      vpatch
       if (domNode) {
         domNode.appendChild(node)
         newNode = node
@@ -44,7 +48,7 @@ module.exports = function insertNode(domNode, vpatch, renderOptions) {
     })
   }
 
-  if (domNode) domNode.appendChild(newNode)
+  if (domNode && newNode) domNode.appendChild(newNode)
 
   return Promise
     .all(onEnter(patch.vnode || patch, newNode))
