@@ -29,7 +29,6 @@ module.exports = function insertNode(domNode, vpatch, renderOptions) {
   if (newNode && newNode.then) {
     return newNode
     .then(function(node) {
-      vpatch
       if (domNode) {
         domNode.appendChild(node)
         newNode = node
@@ -38,7 +37,7 @@ module.exports = function insertNode(domNode, vpatch, renderOptions) {
     })
     .then(function(dom) {
       return Promise
-        .all(onEnter(patch.vnode || patch, newNode))
+        .all(onEnter(patch._node || patch.vnode || patch, newNode))
         .then(function() { 
           return domNode 
         })

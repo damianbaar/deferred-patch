@@ -16,7 +16,10 @@
   "license": "MIT",
   "dependencies": {
     "lodash": "^3.10.1",
+    "seamless-immutable": "^4.0.2",
+    "vdom-thunk": "^3.0.0",
     "virtual-dom": "^2.1.1",
+    "virtual-hyperscript-svg": "^2.0.0",
     "x-is-array": "^0.1.0"
   },
   "watch": {

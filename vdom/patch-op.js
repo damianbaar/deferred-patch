@@ -28,7 +28,7 @@ var t = ["NONE"
 ,"THUNK"]
 
 function applyPatch(vpatch, domNode, renderOptions) {
-  console.log(t[vpatch.type], vpatch.type, vpatch)
+  // console.log(t[vpatch.type], vpatch.type, vpatch)
   var type = vpatch.type
 
   if (patches[type]) return patches[type](domNode, vpatch, renderOptions)
@@ -104,6 +104,7 @@ function widgetPatch(domNode, leftVNode, widget, renderOptions) {
       var patches = renderOptions.diff(d._node, leftVNode._node || domNode._node)
       return renderOptions
         .patch(domNode, patches, renderOptions)
+        // .patch(d || domNode, patches, renderOptions)
         .then(function(d) {
           return d
         })
@@ -204,7 +205,7 @@ function reorderChildren(domNode, moves, vnode) {
     node = childNodes[remove.from]
     if (remove.key) {
       keyMap[remove.key] = node
-      // _domNode.removeChild(node)
+      _domNode.removeChild(node)
     }
     removed.push(node)
   }
@@ -224,7 +225,13 @@ function reorderChildren(domNode, moves, vnode) {
   var getReal = function(id) {
     for(var i = 0; i < childNodes.length; i++) {
       var o = childNodes[i]
-      if(o.getAttribute('__id__') == id) return o
+      if(o.getAttribute('__id__') == id) {
+        //hahaha
+        o.removeAttribute('__id__')
+        o.removeAttribute('__from__')
+        o.removeAttribute('__to__')
+        return o
+      }
     }
   }
 

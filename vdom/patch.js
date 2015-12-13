@@ -28,6 +28,10 @@ module.exports = function defferedPatch(rootNode, patches, renderOptions) {
   var operations = patchIndex.map(function(d) {
     return function(rootNode) {
       return function(ok) {
+        if(!index[d.idx]) {
+          debugger
+          return ok(rootNode) //diff is broken when diffing strings, most likely returns wrong parent
+        }
         var patch = applyPatch(index[d.idx], d.patch, renderOptions)
         if (patch && patch.then) patch.then(function(node) { ok(rootNode) })
         else ok(rootNode)
