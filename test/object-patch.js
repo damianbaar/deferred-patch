@@ -4,6 +4,29 @@ var test = require("tape")
 
 var patch = require('../vdom/object-patch')
 
+var input = { 
+  on: { 
+    'input.ns': 'input' 
+  , 'click.ns': 'click' 
+  },
+  data: [1,2,3]
+}
+
+var events = patch(input, {
+  'on': {
+    transform: function(val, obj, dest) {
+      return _.reduce(val, function(memo, val, key) { 
+        var e = key.split('.')[0]
+        memo['on' + e] = val 
+        return memo
+      }, {})
+    }
+  }
+}, { new: true })
+
+console.log('input', input)
+console.log('events', events)
+
 test("replace value in place", function (assert) {
 
   var transforms = {
@@ -130,6 +153,7 @@ test("copy and rename path", function (assert) {
         return _.keys(val).filter(function(a) { return val[a] })
       },
       to: 'style.classes'
+    , replace: false
     } 
   }
 
@@ -148,5 +172,30 @@ test("copy and rename path", function (assert) {
   assert.end()
 })
 
-// // props: { type: 'text', placeholder: 'Type  your name' },
-//   // on   : { input: update }
+test("copy and rename path", function (assert) {
+
+  var transforms = {
+    'data.className': {
+      transform: function(val, old) {
+        return _.keys(val).filter(function(a) { return val[a] })
+      },
+      to: 'style.classes'
+    , replace: false
+    } 
+  }
+
+  var obj = { 
+    data: { 
+      className: { 
+        container: true
+      , dull: false
+      } 
+  }}
+
+  var r = patch(obj, transforms, { new: true })
+
+  assert.equal(obj.data.className.container, true)
+  assert.equal(r.style.classes.join(), ['container'].join())
+  assert.end()
+})
+

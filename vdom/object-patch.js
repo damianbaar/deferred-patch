@@ -26,6 +26,7 @@ module.exports = function applyTransforms(obj, transforms, opts) {
     , target = createNew ? {} : obj
 
   forEach(transforms, function(property, originalLocation) {
+    //property could be a bare function
     var replace = getOption(property.replace)
 
     var dest = property.to || originalLocation
@@ -38,10 +39,15 @@ module.exports = function applyTransforms(obj, transforms, opts) {
     createNonExistingFields(target, dest)
 
     var last = path.pop()
-    b = getObject(target, path.join('.'))
-    b[last] = property.transform(a, b[last])
 
-    replace = replace && !sameLocation && !createNew
+    b = path.length > 0 ? getObject(target, path.join('.')) : target
+
+    b[last] = property.transform(a, b, dest)
+    
+    var transformed = property.transform(a, b, dest)
+    b[last] = transformed
+
+    replace = replace ? ((replace || createNew) && !sameLocation) : false
     replace && delete obj[originalLocation.split('.')[0]]
   })
 
